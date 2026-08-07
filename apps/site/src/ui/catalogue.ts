@@ -26,7 +26,16 @@ import {
 } from '../copy.js';
 import { scriptUrl } from '../pool.js';
 import { append, bits, clear, h, int } from './dom.js';
+import type { SectionCounter } from './section.js';
 import { tryOn } from './tryout.js';
+
+/**
+ * How many entries the grid shows before asking. Two hundred steles at roughly
+ * a hundred pixels each made the catalogue four and a half thousand pixels of
+ * the page's ten — it buried the entry panel below it and dominated a scroll it
+ * was only ever meant to end. The rest are one click away.
+ */
+const CATALOGUE_PAGE = 48;
 
 export interface CatalogueHandlers {
   onOpen: (id: string) => void;
@@ -52,11 +61,15 @@ export function renderCatalogue(
   selectedId: string | null,
   handlers: CatalogueHandlers,
   poolNote: string,
+  sections: SectionCounter,
+  expanded: boolean,
+  onExpand: () => void,
 ): void {
   clear(mount);
 
+  const shown = expanded ? entries : entries.slice(0, CATALOGUE_PAGE);
   const grid = h('div', { class: 'catalogue' });
-  for (const entry of entries) {
+  for (const entry of shown) {
     append(grid, [
       h(
         'button',
@@ -76,24 +89,35 @@ export function renderCatalogue(
     ]);
   }
 
+  const remaining = entries.length - shown.length;
+  const more = h('button', { type: 'button', onclick: onExpand }, `Show the remaining ${int(remaining)}`);
+
   append(mount, [
-    h(
-      'section',
-      { class: 'panel', id: 'catalogue' },
-      h(
-        'div',
-        { class: 'panel__inner stack' },
-        h('span', { class: 'label', text: 'The catalogue' }),
-        h('h2', { text: entries.length > 0 ? 'Every entry in the pool' : 'The pool is empty' }),
-        entries.length > 0
-          ? h('p', { text: 'Open any entry to read its attributes and take a script that presents it as yours.' })
-          : h('p', { text: 'Nothing has been donated yet. Measure yourself and donate, and this becomes the first entry.' }),
-        // §7a. Plain body text at normal size, in the same voice as everything
-        // else on the page.
-        h('p', { text: MODEL_ADDRESS }),
-        h('p', { class: 'mono dim', text: poolNote }),
-        grid,
-      ),
+    sections.section(
+      {
+        id: 'catalogue',
+        eyebrow: 'The catalogue',
+        title: entries.length > 0 ? 'Every entry in the pool' : 'The pool is empty',
+      },
+      entries.length > 0
+        ? h('p', { text: 'Open any entry to read its attributes and take a script that presents it as yours.' })
+        : h('p', { text: 'Nothing has been donated yet. Measure yourself and donate, and this becomes the first entry.' }),
+      // §7a. Plain body text at normal size, in the same voice as everything
+      // else on the page.
+      h('p', { text: MODEL_ADDRESS }),
+      h('p', { class: 'mono dim', text: poolNote }),
+      grid,
+      remaining > 0
+        ? h(
+            'div',
+            { class: 'stack' },
+            h('p', {
+              class: 'mono dim',
+              text: `Showing ${int(shown.length)} of ${int(entries.length)}.`,
+            }),
+            h('div', {}, more),
+          )
+        : null,
     ),
   ]);
 }
@@ -111,6 +135,8 @@ export function renderEntry(
    * reading what it was.
    */
   mayReadThisBrowser: boolean,
+  sections: SectionCounter,
+  onClose: () => void,
 ): void {
   clear(mount);
 
@@ -326,63 +352,57 @@ export function renderEntry(
   ]);
 
   append(mount, [
-    h(
-      'section',
-      { class: 'panel panel--solid', id: 'entry' },
+    sections.section(
+      { id: 'entry', eyebrow: 'Entry', title: entry.id.slice(0, 24), solid: true },
+      h('p', {
+        class: 'mono dim',
+        text: `Entered the pool ${entry.createdAt}. Worn ${int(entry.wearCount)}×. ${entry.wearCount > 1 ? `${bits(bitsDestroyedBy(entry.wearCount))} bits of its surprisal destroyed.` : 'No one has worn it yet.'}`,
+      }),
+      h('div', {}, h('button', { type: 'button', onclick: onClose }, 'Close this entry')),
+      h('div', { class: 'scroll-x' }, attributes),
+      h('hr', { class: 'rule' }),
+      h('h4', { class: 'sub', text: 'What the script does' }),
+      coverageList,
       h(
         'div',
-        { class: 'panel__inner stack' },
-        h('span', { class: 'label', text: 'Entry' }),
-        h('h2', { text: entry.id.slice(0, 24) }),
-        h('p', {
-          class: 'mono dim',
-          text: `Entered the pool ${entry.createdAt}. Worn ${int(entry.wearCount)}×. ${entry.wearCount > 1 ? `${bits(bitsDestroyedBy(entry.wearCount))} bits of its surprisal destroyed.` : 'No one has worn it yet.'}`,
-        }),
-        h('div', { class: 'scroll-x' }, attributes),
-        h('hr', { class: 'rule' }),
-        h('h3', { text: 'What the script does' }),
-        coverageList,
-        h(
-          'div',
-          { class: 'stack' },
-          modeToggle(
-            'Converge the canvas',
-            options.canvasMode === 'converge',
-            'Replaces canvas readback with a value derived from this identity, so every wearer produces the same one. Off, the low bits are perturbed instead: canvas keeps working on pages that use it, and wearers no longer match each other.',
-            (value) => onOptionsChange({ ...options, canvasMode: value ? 'converge' : 'perturb' }),
-          ),
-          modeToggle(
-            'Converge the audio',
-            options.audioMode === 'converge',
-            'Same trade for the audio context.',
-            (value) => onOptionsChange({ ...options, audioMode: value ? 'converge' : 'perturb' }),
-          ),
-          modeToggle(
-            'Hide the overrides from toString',
-            options.hideOverrides,
-            'Makes the patched functions report as native. This is not free: a toString that lies is itself something detectors test for, by comparing against a known-native reference. You are trading one signal for another.',
-            (value) => onOptionsChange({ ...options, hideOverrides: value }),
-          ),
+        { class: 'stack' },
+        modeToggle(
+          'Converge the canvas',
+          options.canvasMode === 'converge',
+          'Replaces canvas readback with a value derived from this identity, so every wearer produces the same one. Off, the low bits are perturbed instead: canvas keeps working on pages that use it, and wearers no longer match each other.',
+          (value) => onOptionsChange({ ...options, canvasMode: value ? 'converge' : 'perturb' }),
         ),
-        h('hr', { class: 'rule' }),
-        h('h3', { text: 'Trying it before installing anything' }),
-        h('p', { text: TRY_ON_NOTE }),
-        h('div', {}, tryButton),
-        tryOutput,
-        h('hr', { class: 'rule' }),
-        h('h3', { text: 'Wearing it everywhere else' }),
-        h('p', { text: WHY_AN_EXTENSION }),
-        h('p', { text: INSTALL_NOTE }),
-        managers,
-        h('div', { class: 'choice-row' }, installLink, downloadButton),
-        status,
-        h('hr', { class: 'rule' }),
-        h('h3', { text: WEARING_LIMITS_HEAD }),
-        h('p', { text: WEARING_LIMITS }),
-        limits,
-        h('p', { text: VERIFY_NOTE }),
-        verify,
+        modeToggle(
+          'Converge the audio',
+          options.audioMode === 'converge',
+          'Same trade for the audio context.',
+          (value) => onOptionsChange({ ...options, audioMode: value ? 'converge' : 'perturb' }),
+        ),
+        modeToggle(
+          'Hide the overrides from toString',
+          options.hideOverrides,
+          'Makes the patched functions report as native. This is not free: a toString that lies is itself something detectors test for, by comparing against a known-native reference. You are trading one signal for another.',
+          (value) => onOptionsChange({ ...options, hideOverrides: value }),
+        ),
       ),
+      h('hr', { class: 'rule' }),
+      h('h4', { class: 'sub', text: 'Trying it before installing anything' }),
+      h('p', { text: TRY_ON_NOTE }),
+      h('div', {}, tryButton),
+      tryOutput,
+      h('hr', { class: 'rule' }),
+      h('h4', { class: 'sub', text: 'Wearing it everywhere else' }),
+      h('p', { text: WHY_AN_EXTENSION }),
+      h('p', { text: INSTALL_NOTE }),
+      managers,
+      h('div', { class: 'choice-row' }, installLink, downloadButton),
+      status,
+      h('hr', { class: 'rule' }),
+      h('h4', { class: 'sub', text: WEARING_LIMITS_HEAD }),
+      h('p', { text: WEARING_LIMITS }),
+      limits,
+      h('p', { text: VERIFY_NOTE }),
+      verify,
     ),
   ]);
 }

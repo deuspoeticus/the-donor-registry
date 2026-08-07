@@ -8,7 +8,11 @@
       name="description"
       content="A public pool of browser signatures. Measure yours, see what it says, and put it in the commons for anyone to wear."
     />
-    <link rel="icon" href="data:," />
+    <!-- Self-hosted. Root-relative on purpose: Vite rewrites asset URLs in this
+         file with the configured base, so this survives the /the-donor-registry/
+         prefix GitHub Pages serves the project site under. Do not add
+         %BASE_URL% here — it would be prefixed a second time. -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>

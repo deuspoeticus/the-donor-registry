@@ -17,6 +17,7 @@ import type { ChowLiuTree } from '@wearme/core/chowliu';
 
 import { TREE_NOTE } from '../copy.js';
 import { append, clear, h, svg } from './dom.js';
+import type { SectionCounter } from './section.js';
 
 interface Placed {
   attr: string;
@@ -25,7 +26,12 @@ interface Placed {
   depth: number;
 }
 
-export function renderTree(mount: HTMLElement, tree: ChowLiuTree, poolSize: number): void {
+export function renderTree(
+  mount: HTMLElement,
+  tree: ChowLiuTree,
+  poolSize: number,
+  sections: SectionCounter,
+): void {
   clear(mount);
 
   const width = 1000;
@@ -126,21 +132,19 @@ export function renderTree(mount: HTMLElement, tree: ChowLiuTree, poolSize: numb
   }
 
   append(mount, [
-    h(
-      'section',
-      { class: 'panel panel--solid', id: 'tree' },
-      h(
-        'div',
-        { class: 'panel__inner stack' },
-        h('span', { class: 'label', text: 'The model' }),
-        h('h2', { text: 'What the pool thinks a person is made of' }),
-        h('p', { text: TREE_NOTE }),
-        h('div', { class: 'scroll-x' }, canvas as unknown as Node),
-        h('p', {
-          class: 'mono dim',
-          text: `${tree.nodes.length} attributes, ${tree.edges.length} edges, fitted over ${poolSize} entries. Strongest link: ${strongest(tree)}.`,
-        }),
-      ),
+    sections.section(
+      {
+        id: 'tree',
+        eyebrow: 'The model',
+        title: 'What the pool thinks a person is made of',
+        solid: true,
+      },
+      h('p', { text: TREE_NOTE }),
+      h('div', { class: 'scroll-x' }, canvas as unknown as Node),
+      h('p', {
+        class: 'mono dim',
+        text: `${tree.nodes.length} attributes, ${tree.edges.length} edges, fitted over ${poolSize} entries. Strongest link: ${strongest(tree)}.`,
+      }),
     ),
   ]);
 }

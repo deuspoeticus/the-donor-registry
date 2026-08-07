@@ -28,7 +28,9 @@ import {
   LAW_NOTE,
   MODEL_ADDRESS,
   NO_GATE_NOTE,
+  PROPOSITION,
   REVOCATION_NOTE,
+  RUNNING_HEAD,
   SYNTHETIC_DISCLOSURE,
   WORN_NOW,
 } from './copy.js';
@@ -51,7 +53,9 @@ import {
 } from './ui/catalogue.js';
 import { append, bits, clear, h, int } from './ui/dom.js';
 import { renderGate, renderPayloadPreview, type Tier } from './ui/gate.js';
+import { createNav } from './ui/nav.js';
 import { renderReadout } from './ui/readout.js';
+import { createSectionCounter, type SectionCounter } from './ui/section.js';
 import { renderTree } from './ui/tree.js';
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -73,12 +77,30 @@ interface State {
   wearOptions: WearOptions;
   revocationToken: string | null;
   donatedId: string | null;
+  /** Whether the catalogue is showing every entry or only its first page. */
+  catalogueExpanded: boolean;
   /** Pool-relative range the monument ranks corruption against. */
   scale: CorruptionScale;
 }
 
 let state: State;
 let monument: Monument | null = null;
+
+/**
+ * Lives outside `#app` and survives every re-render, because `render()` clears
+ * that element wholesale and a nav rebuilt underneath the visitor would drop
+ * focus and scroll position mid-interaction.
+ */
+const nav = createNav({
+  reducedMotion,
+  onHome: () => {
+    monument?.setFocus(state.tier === 'look' ? 0 : 1);
+    state.selectedId = null;
+    monument?.setSelected(null);
+    render();
+  },
+});
+document.body.insertBefore(nav.el, document.body.firstChild);
 
 async function bootstrap(): Promise<void> {
   const pool = await loadPool();
@@ -96,6 +118,7 @@ async function bootstrap(): Promise<void> {
     wearOptions: { ...DEFAULT_WEAR_OPTIONS },
     revocationToken: null,
     donatedId: null,
+    catalogueExpanded: false,
     scale: { min: 0, max: 1 },
   };
 
@@ -161,6 +184,10 @@ async function onChooseTier(tier: Tier): Promise<void> {
     return;
   }
 
+  // The measuring screen and the payload preview are full-height and are the
+  // only thing the visitor should be looking at, so the running head stays down
+  // until the page proper renders.
+  nav.setVisible(false);
   clear(app);
   append(app, [
     h(
@@ -262,11 +289,18 @@ function render(): void {
   clear(app);
 
   if (state.tier === null) {
+    nav.setVisible(false);
     renderGate(app, poolSummary(), onChooseTier);
     return;
   }
 
-  append(app, [header()]);
+  // Numbering is handed out in render order rather than hardcoded, because
+  // which sections exist depends on the tier: "Look only" has no measurement
+  // and no inference, and a fixed `03` above the model would announce two
+  // chapters the page does not contain.
+  const sections = createSectionCounter();
+
+  append(app, [masthead()]);
 
   // If a script emitted by this piece is patching this page, say so before any
   // number is shown. Everything measured below is then a measurement of the
@@ -278,20 +312,39 @@ function render(): void {
   if (state.report && state.collection) {
     const readoutMount = h('div');
     app.appendChild(readoutMount);
-    renderReadout(readoutMount, state.report, state.model.nearUniqueIds, state.collection.failed);
-    app.appendChild(automationPanel());
+    renderReadout(
+      readoutMount,
+      state.report,
+      state.model.nearUniqueIds,
+      state.collection.failed,
+      sections,
+    );
+    app.appendChild(automationPanel(sections));
     if (state.tier === 'donate' && state.donatedId) app.appendChild(donationPanel());
   }
 
   const treeMount = h('div');
   app.appendChild(treeMount);
-  renderTree(treeMount, state.forge.tree, state.pool.stats.size);
+  renderTree(treeMount, state.forge.tree, state.pool.stats.size, sections);
 
-  app.appendChild(forgePanel());
+  app.appendChild(forgePanel(sections));
 
   const catalogueMount = h('div');
   app.appendChild(catalogueMount);
-  renderCatalogue(catalogueMount, state.pool.entries, state.selectedId, catalogueHandlers(), inscriptions());
+  renderCatalogue(
+    catalogueMount,
+    state.pool.entries,
+    state.selectedId,
+    catalogueHandlers(),
+    poolLine(),
+    sections,
+    state.catalogueExpanded,
+    () => {
+      state.catalogueExpanded = true;
+      render();
+      document.getElementById('catalogue')?.scrollIntoView({ block: 'start' });
+    },
+  );
 
   if (state.selectedId) {
     const entry = state.pool.entries.find((e) => e.id === state.selectedId);
@@ -312,46 +365,74 @@ function render(): void {
         // Tier one promised this browser would not be measured, and the
         // demonstration's comparison column would measure it.
         state.tier !== 'look',
+        sections,
+        () => {
+          state.selectedId = null;
+          monument?.setSelected(null);
+          render();
+          document.getElementById('catalogue')?.scrollIntoView({ block: 'start' });
+        },
       );
     }
   }
 
-  app.appendChild(colophon());
+  app.appendChild(colophon(sections));
+
+  // Built from the sections this pass actually produced, so the nav cannot
+  // list a chapter the page does not have.
+  nav.sync(sections.entries());
+  nav.setVisible(true);
 }
 
-function header(): HTMLElement {
-  const back = h('button', {
-    type: 'button',
-    onclick: () => {
-      monument?.setFocus(0);
-      state.selectedId = null;
-      monument?.setSelected(null);
-      render();
-    },
-  }, 'Show the whole field');
+/**
+ * The masthead. It used to be the word "Wear me" at nine rem and a run-on line
+ * of statistics, which told a visitor arriving past the gate nothing about what
+ * they were looking at — the piece stated its subject exactly once, on the gate,
+ * and then never again. It now carries the proposition and sets the numbers as
+ * a figure row rather than a sentence of separators.
+ */
+function masthead(): HTMLElement {
+  const { stats } = state.pool;
+  const figures: [string, string][] = [
+    [int(stats.size), 'entries'],
+    [int(stats.donatedCount), 'donated'],
+    [int(stats.totalWears), 'wears'],
+    [bits(stats.bitsDestroyed), 'bits destroyed'],
+    [int(stats.machineDonations), 'read as machines'],
+  ];
+
+  const row = h('div', { class: 'stats' });
+  for (const [value, label] of figures) {
+    append(row, [
+      h(
+        'div',
+        { class: 'stats__item' },
+        h('span', { class: 'stats__value', text: value }),
+        h('span', { class: 'stats__label', text: label }),
+      ),
+    ]);
+  }
 
   return h(
     'section',
-    { class: 'panel' },
+    { class: 'panel masthead', id: 'top' },
     h(
       'div',
-      { class: 'panel__inner stack' },
-      h('h1', { text: 'Wear me' }),
-      h('p', { class: 'mono dim', text: inscriptions() }),
-      h('div', {}, back),
+      { class: 'panel__inner' },
+      h('p', { class: 'runhead', text: RUNNING_HEAD }),
+      h('h1', { class: 'masthead__title', text: 'Wear me' }),
+      h('p', { class: 'proposition', text: PROPOSITION }),
+      h('hr', { class: 'rule' }),
+      h('span', { class: 'label', text: 'The pool, as it stands' }),
+      row,
+      h('p', { class: 'mono dim', style: 'margin-top:1.5rem', text: poolLine() }),
     ),
   );
 }
 
-function inscriptions(): string {
+function poolLine(): string {
   const { stats } = state.pool;
-  return [
-    `${int(stats.size)} entries`,
-    `${int(stats.donatedCount)} donated`,
-    `${int(stats.totalWears)} wears`,
-    `${bits(stats.bitsDestroyed)} bits destroyed`,
-    `${int(stats.machineDonations)} donations read as machines`,
-  ].join(' · ');
+  return `${int(stats.size)} entries · ${int(stats.donatedCount)} donated · ${int(stats.totalWears)} wears · ${bits(stats.bitsDestroyed)} bits destroyed · ${int(stats.machineDonations)} donations read as machines`;
 }
 
 function wornPanel(id: string): HTMLElement {
@@ -382,19 +463,13 @@ function wornPanel(id: string): HTMLElement {
   );
 }
 
-function automationPanel(): HTMLElement {
+function automationPanel(sections: SectionCounter): HTMLElement {
   const estimate = state.automation;
   if (!estimate) return h('div');
-  return h(
-    'section',
-    { class: 'panel panel--solid' },
-    h(
-      'div',
-      { class: 'panel__inner stack' },
-      h('span', { class: 'label', text: 'Automation likelihood' }),
-      h('p', { class: 'caveat', text: automationStatement(estimate) }),
-      h('p', { class: 'mono dim', text: NO_GATE_NOTE }),
-    ),
+  return sections.section(
+    { id: 'inference', eyebrow: 'Inference', solid: true },
+    h('p', { class: 'caveat', text: automationStatement(estimate) }),
+    h('p', { class: 'mono dim', text: NO_GATE_NOTE }),
   );
 }
 
@@ -451,7 +526,7 @@ function donationPanel(): HTMLElement {
   );
 }
 
-function forgePanel(): HTMLElement {
+function forgePanel(sections: SectionCounter): HTMLElement {
   const stats = state.forge.stats;
   const button = h('button', { type: 'button' }, 'Manufacture one');
   const output = h('pre', { class: 'payload', text: 'Nothing manufactured yet.' });
@@ -483,23 +558,16 @@ function forgePanel(): HTMLElement {
     ].join('\n');
   });
 
-  return h(
-    'section',
-    { class: 'panel' },
-    h(
-      'div',
-      { class: 'panel__inner stack' },
-      h('span', { class: 'label', text: 'The forge' }),
-      h('h2', { text: 'The piece manufactures people' }),
-      h('p', { text: FORGE_NOTE }),
-      h('p', {
-        class: 'mono dim',
-        text: `Sampled: ${int(state.forge.sampledIds.length)} attributes. Grafted from a donor with matching hardware: ${state.forge.graftedIds.map(attrLabel).join(', ')} — these cannot be invented, because a manufactured digest is a digest of nothing.`,
-      }),
-      h('div', {}, button),
-      counts,
-      output,
-    ),
+  return sections.section(
+    { id: 'forge', eyebrow: 'The forge', title: 'The piece manufactures people' },
+    h('p', { text: FORGE_NOTE }),
+    h('p', {
+      class: 'mono dim',
+      text: `Sampled: ${int(state.forge.sampledIds.length)} attributes. Grafted from a donor with matching hardware: ${state.forge.graftedIds.map(attrLabel).join(', ')} — these cannot be invented, because a manufactured digest is a digest of nothing.`,
+    }),
+    h('div', {}, button),
+    counts,
+    output,
   );
 }
 
@@ -528,21 +596,16 @@ function catalogueHandlers() {
   };
 }
 
-function colophon(): HTMLElement {
-  return h(
-    'section',
-    { class: 'panel panel--solid' },
-    h(
-      'div',
-      { class: 'panel__inner stack' },
-      h('span', { class: 'label', text: 'Colophon' }),
-      h('p', { text: LAW_NOTE }),
-      h('p', { text: MODEL_ADDRESS }),
-      h('p', {
-        class: 'mono dim',
-        text: 'WEAR ME — a fingerprint commons. Web Residencies No. 22, »Ignore All Previous Instructions«, Akademie Schloss Solitude, curated by !Mediengruppe Bitnik. No third-party requests are made from this page, including for its lettering.',
-      }),
-    ),
+// Unnumbered: a foot rather than a chapter, and so it stays out of the nav.
+function colophon(sections: SectionCounter): HTMLElement {
+  return sections.plain(
+    { id: 'colophon', eyebrow: 'Colophon', solid: true },
+    h('p', { text: LAW_NOTE }),
+    h('p', { text: MODEL_ADDRESS }),
+    h('p', {
+      class: 'mono dim',
+      text: 'WEAR ME — a fingerprint commons. Web Residencies No. 22, »Ignore All Previous Instructions«, Akademie Schloss Solitude, curated by !Mediengruppe Bitnik. No third-party requests are made from this page, including for its lettering.',
+    }),
   );
 }
 
