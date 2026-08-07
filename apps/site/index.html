@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>WEAR ME — a fingerprint commons</title>
+    <meta
+      name="description"
+      content="A public pool of browser signatures. Measure yours, see what it says, and put it in the commons for anyone to wear."
+    />
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <canvas id="monument" aria-hidden="true"></canvas>
+
+    <noscript>
+      <div class="noscript">
+        This page measures your browser in front of you and shows you the result. It needs JavaScript
+        to do that, and it does nothing at all without it. That is the honest position: with
+        scripting off there is no measurement to show you and nothing has been collected.
+      </div>
+    </noscript>
+
+    <main id="app" hidden>
+      <!-- Filled by src/main.ts. Nothing is rendered before the pool has loaded,
+           because every number on this page is stated relative to that pool. -->
+    </main>
+
+    <div id="boot" class="boot">
+      <p class="boot__line">Loading the pool.</p>
+      <p class="boot__note">Nothing has been measured yet.</p>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

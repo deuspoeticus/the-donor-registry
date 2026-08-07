@@ -1,0 +1,22 @@
+{
+  "name": "wear-me",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "WEAR ME — a fingerprint commons. Web Residencies No. 22, Akademie Schloss Solitude.",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @wearme/site",
+    "dev:api": "npm run dev --workspace @wearme/api",
+    "build": "npm run build --workspace @wearme/site",
+    "preview": "npm run preview --workspace @wearme/site",
+    "bootstrap": "npm run bootstrap --workspace @wearme/core",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}
