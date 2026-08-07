@@ -16,7 +16,16 @@ import { EXCLUDED_SURFACES } from '@wearme/core/attributes';
 import { prettyPayload } from '@wearme/core/canonical';
 import type { AttrVector } from '@wearme/core/types';
 
-import { CONSENT_TIERS, MODEL_ADDRESS, PAYLOAD_INTRO, STANDFIRST, WHAT_THIS_IS } from '../copy.js';
+import {
+  CONSENT_TIERS,
+  MODEL_ADDRESS,
+  PAYLOAD_INTRO,
+  PROPOSITION,
+  RUNNING_HEAD,
+  STANDFIRST,
+  THE_LOOP,
+  WHAT_THIS_IS,
+} from '../copy.js';
 import { append, clear, h } from './dom.js';
 
 export type Tier = 'look' | 'measure' | 'donate';
@@ -28,7 +37,7 @@ export function renderGate(
 ): void {
   clear(mount);
 
-  const tiers = h('div', { class: 'tiers', role: 'group', 'aria-label': 'What this page may do' });
+  const tiers = h('div', { class: 'tiers', role: 'group', 'aria-labelledby': 'tiers-label' });
   for (const tier of CONSENT_TIERS) {
     append(tiers, [
       h(
@@ -53,6 +62,21 @@ export function renderGate(
     ]);
   }
 
+  // The loop, before the choice. Three steps at equal weight, numbered, so the
+  // tier buttons below are chosen against a picture of where each one leads.
+  const loop = h('ol', { class: 'loop' });
+  for (const [i, item] of THE_LOOP.entries()) {
+    append(loop, [
+      h(
+        'li',
+        { class: 'loop__step' },
+        h('span', { class: 'loop__num', text: String(i + 1).padStart(2, '0') }),
+        h('h3', { class: 'loop__name', text: item.step }),
+        h('p', { class: 'loop__body', text: item.body }),
+      ),
+    ]);
+  }
+
   append(mount, [
     h(
       'section',
@@ -60,15 +84,30 @@ export function renderGate(
       h(
         'div',
         { class: 'gate__inner' },
+        h('p', { class: 'runhead', text: RUNNING_HEAD }),
         h('h1', { text: 'Wear me' }),
-        h('p', { class: 'caveat', style: 'margin-top:1.5rem', text: STANDFIRST }),
+        // The deck's own line, set as the standfirst. It is the shortest true
+        // statement of the piece and it belongs above the explanation, not
+        // after it.
+        h('p', { class: 'proposition', text: PROPOSITION }),
+        h('p', { class: 'caveat', text: STANDFIRST }),
+        h('hr', { class: 'rule' }),
+        h('span', { class: 'label', text: 'The loop' }),
+        loop,
+        h('hr', { class: 'rule' }),
+        h('span', { class: 'label', id: 'tiers-label', text: 'What this page may do' }),
         tiers,
         h('p', { class: 'mono dim', style: 'margin-top:1.5rem', text: poolSummary }),
         h('hr', { class: 'rule' }),
         h(
           'div',
           { class: 'grid-2' },
-          h('div', { class: 'stack' }, ...WHAT_THIS_IS.map((text) => h('p', { text }))),
+          h(
+            'div',
+            {},
+            h('span', { class: 'label', text: 'The condition' }),
+            h('div', { class: 'stack' }, ...WHAT_THIS_IS.map((text) => h('p', { text }))),
+          ),
           h(
             'div',
             {},

@@ -31,6 +31,10 @@
 
   --gutter: clamp(1.25rem, 4vw, 3.5rem);
   --measure: 68ch;
+  --nav-h: 3.25rem;
+  /* The deck's label column: a fixed left rail of small mono labels against a
+     flowing right column. Used by the section heads and the definition rows. */
+  --rail: 4.5rem;
 }
 
 *,
@@ -94,6 +98,131 @@ main {
   margin: 0;
 }
 
+/* ---------------------------------------------------------------- running head */
+
+/*
+ * The page is a single scroll of roughly ten thousand pixels and previously had
+ * no navigation of any kind — no jump, no return, and once an entry was open
+ * below a catalogue of two hundred, no way back to the top but the scrollbar.
+ *
+ * The bar is deliberately thin and quiet. It is a running head in the print
+ * sense, not application chrome: hairline rule, mono at label size, and the
+ * current section marked by a shift in value. Nothing here shifts in hue,
+ * because on this site colour means identifying information.
+ */
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  height: var(--nav-h);
+  background: color-mix(in srgb, var(--ground) 82%, transparent);
+  backdrop-filter: blur(18px);
+  border-bottom: 1px solid var(--rule);
+}
+
+.nav[hidden] {
+  display: none;
+}
+
+.nav__inner {
+  max-width: 92rem;
+  margin: 0 auto;
+  height: 100%;
+  padding: 0 var(--gutter);
+  display: flex;
+  align-items: center;
+  gap: clamp(1rem, 3vw, 2.5rem);
+}
+
+.nav__mark {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--bone);
+  background: transparent;
+  border: 0;
+  padding: 0.4em 0;
+  flex: none;
+  cursor: pointer;
+}
+
+.nav__mark:hover {
+  background: transparent;
+  color: var(--bone);
+}
+
+/* The link row scrolls rather than wraps: the bar must stay one line tall so
+   the scroll-margin below it stays a single known quantity. */
+.nav__wrap {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.nav__wrap::-webkit-scrollbar {
+  display: none;
+}
+
+.nav__links {
+  display: flex;
+  gap: clamp(0.9rem, 2.2vw, 2rem);
+  justify-content: flex-end;
+  min-width: max-content;
+}
+
+.nav__link {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5em;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--grey-dim);
+  text-decoration: none;
+  white-space: nowrap;
+  padding: 0.5em 0;
+  border-bottom: 1px solid transparent;
+  transition: color 120ms linear, border-color 120ms linear;
+}
+
+.nav__link:hover {
+  color: var(--bone-dim);
+}
+
+.nav__link.is-current {
+  color: var(--bone);
+  border-bottom-color: var(--bone);
+}
+
+.nav__num {
+  color: var(--grey-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.nav__link.is-current .nav__num {
+  color: var(--bone-dim);
+}
+
+/* Anchors land below the bar rather than under it. */
+body.has-nav section[id] {
+  scroll-margin-top: calc(var(--nav-h) + 1rem);
+}
+
+body.has-nav main {
+  padding-top: var(--nav-h);
+}
+
+@media (max-width: 44rem) {
+  .nav__name {
+    display: none;
+  }
+}
+
 /* ---------------------------------------------------------------- structure */
 
 .panel {
@@ -114,6 +243,293 @@ main {
 
 .stack > * + * {
   margin-top: 1.1em;
+}
+
+/* ------------------------------------------------- numbered section eyebrows */
+
+/*
+ * The deck's editorial system (pages 2–5): a numeral, the chapter name in mono
+ * caps, and a hairline rule across the full measure. Before this, every section
+ * opened with the same unnumbered small-caps label, so seven chapters of a very
+ * long scroll all announced themselves at identical weight and nothing told the
+ * visitor where they were or how much was left.
+ *
+ * The deck sets its numerals in red. That stops at the deck: this site's rule
+ * is that colour means identifying information, and a red numeral would be the
+ * first exception to it.
+ */
+.sec__head {
+  display: grid;
+  grid-template-columns: var(--rail) 1fr;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: clamp(1.75rem, 4vw, 3rem);
+}
+
+.sec__num {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  color: var(--grey-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.sec__eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 400;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--bone-dim);
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Sits in the content column, clear of the numeral rail. */
+.sec__body {
+  padding-left: 0;
+}
+
+@media (min-width: 60rem) {
+  .sec__body {
+    padding-left: var(--rail);
+  }
+}
+
+/* The display headline below the rule. Tagged h3 for correct nesting under the
+   eyebrow's h2, and sized here rather than by tag. */
+.sec__title {
+  font-size: clamp(1.5rem, 3.6vw, 2.6rem);
+  letter-spacing: -0.025em;
+  margin-bottom: 0.3em;
+}
+
+/* Subheads inside a section, below the display headline. */
+.sub {
+  font-family: var(--font-display);
+  color: var(--bone);
+  font-weight: 500;
+  font-size: clamp(1.05rem, 1.9vw, 1.3rem);
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  margin: 0;
+}
+
+/* ---------------------------------------------------------------- masthead */
+
+.masthead__title {
+  /* The gate gets the nine-rem setting. Past it the title is a running mark,
+     not the event, and a second full-bleed wordmark on every screen was simply
+     taking the space the content needed. */
+  font-size: clamp(2.5rem, 7vw, 5rem);
+  margin-bottom: 0.25em;
+}
+
+.runhead {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--grey-dim);
+  margin-bottom: 1.5rem;
+}
+
+/* The deck's opening line, and the shortest true statement of the piece. */
+.proposition {
+  font-family: var(--font-display);
+  font-size: clamp(1.15rem, 2.4vw, 1.75rem);
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  color: var(--bone);
+  max-width: 28ch;
+  text-wrap: balance;
+  margin-bottom: 1.5rem;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+  gap: clamp(1rem, 3vw, 2rem);
+}
+
+.stats__value {
+  display: block;
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 3.4vw, 2.6rem);
+  line-height: 1;
+  letter-spacing: -0.035em;
+  color: var(--bone);
+  font-variant-numeric: tabular-nums;
+}
+
+.stats__label {
+  display: block;
+  margin-top: 0.6em;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--grey-dim);
+}
+
+/* ---------------------------------------------------------------- the loop */
+
+/*
+ * Measure → donate → wear, stated on the gate before the tier buttons, so the
+ * choice below is made against a picture of where each option leads rather
+ * than against three paragraphs of prose.
+ */
+.loop {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+  background: var(--rule);
+  border: 1px solid var(--rule);
+}
+
+.loop__step {
+  background: var(--ground);
+  padding: clamp(1.25rem, 2.5vw, 1.75rem);
+}
+
+.loop__num {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  color: var(--grey-dim);
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 0.9em;
+}
+
+.loop__name {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  color: var(--bone);
+  letter-spacing: -0.02em;
+  margin: 0 0 0.4em;
+}
+
+.loop__body {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--bone-dim);
+}
+
+/* ------------------------------------------------------------ group bar chart */
+
+/*
+ * Deck page 3. A full-width track, a filled bar, a tick at the value, and the
+ * number right-aligned in a column of its own. The section used to open on
+ * forty rows of monospace with a 2px hairline under one cell; this is the
+ * summary that was missing, and the table now sits behind a disclosure as the
+ * evidence rather than the headline.
+ */
+.bars {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.bars__row {
+  display: grid;
+  grid-template-columns: minmax(4.5rem, 7rem) 1fr 3rem;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.bars__label {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  color: var(--grey);
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bars__track {
+  position: relative;
+  display: block;
+  height: 1.15rem;
+  background: var(--ground-lift);
+  border: 1px solid var(--rule);
+}
+
+.bars__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--bone);
+  opacity: 0.82;
+}
+
+/* The tick the deck puts at the head of each bar. */
+.bars__tick {
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--bone);
+}
+
+.bars__value {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--bone);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------- disclosure */
+
+.details {
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+
+.details__summary {
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--grey);
+  padding: 1em 0;
+  cursor: pointer;
+  list-style: none;
+}
+
+.details__summary::-webkit-details-marker {
+  display: none;
+}
+
+.details__summary::before {
+  content: '+';
+  display: inline-block;
+  width: 1.4em;
+  color: var(--grey-dim);
+}
+
+.details[open] .details__summary {
+  color: var(--bone);
+  border-bottom: 1px solid var(--rule);
+}
+
+.details[open] .details__summary::before {
+  content: '–';
+}
+
+.details__summary:focus-visible {
+  outline: 2px solid var(--bone);
+  outline-offset: 3px;
+}
+
+.details > .scroll-x {
+  padding: 1.5rem 0;
 }
 
 .rule {

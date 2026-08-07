@@ -12,7 +12,37 @@
  * distinguish between its visitors also does not change its tone for them.
  */
 
+/**
+ * The deck's own opening line, and the shortest true statement of the piece.
+ * It leads the gate and repeats in the masthead, because the previous build
+ * said what the page was exactly once — on the gate — and then never again, so
+ * everything past the first screen read as an instrument with no subject.
+ */
+export const PROPOSITION = `Your browser has a face. This work takes it, and gives it away.`;
+
+export const RUNNING_HEAD = `Web Residencies No. 22 — Ignore All Previous Instructions`;
+
 export const STANDFIRST = `Every browser leaks a near-unique signature. This page measures yours in front of you, tells you what the measurement says, and offers to put it into a public pool that anyone can wear.`;
+
+/**
+ * The loop, in the order it actually happens (deck §02). Three steps, stated
+ * before the visitor is asked to choose a tier, so that the choice is made
+ * against a picture of where it leads rather than against a paragraph.
+ */
+export const THE_LOOP = [
+  {
+    step: 'Measured',
+    body: 'Fourteen probes read the surfaces your browser hands out to anyone who asks — canvas, WebGL, audio, fonts, time zone, cores. None of it needs permission and none of it appears in any privacy indicator.',
+  },
+  {
+    step: 'Donated',
+    body: 'If you consent, the signature enters a public pool and stands there as one stele in a field of donated faces. You see the exact payload first, and you keep a token that withdraws it again.',
+  },
+  {
+    step: 'Worn',
+    body: 'Anyone can take any entry and install a script that makes their browser render as that face. You can wear a stranger. A stranger can wear you. An agent can wear either.',
+  },
+];
 
 export const WHAT_THIS_IS = [
   `Canvas rendering quirks, driver strings, audio output, font metrics, time zone, core count. None of it asks permission and none of it appears in any privacy indicator. Together it is usually enough to pick one machine out of a very large crowd.`,
