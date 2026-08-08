@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # Called by publish-pool.yml after it commits a new catalogue. A push made
+  # with the default GITHUB_TOKEN does not start other workflows, so that job
+  # cannot rely on its own commit triggering the deploy above — it calls this
+  # one directly instead.
+  workflow_call:
 
 permissions:
   contents: read
@@ -24,7 +29,23 @@ jobs:
           node-version: 20
       - run: npm ci
       - run: npm run typecheck
+
+      # The site falls back to http://127.0.0.1:8787 when VITE_API_URL is unset,
+      # which is correct for a developer and silently wrong for a deployment:
+      # the build would succeed, ship, and tell every visitor the pool service
+      # was unreachable. Failing here is the cheap version of that discovery.
+      - name: Require the pool service URL
+        run: |
+          if [ -z "${{ secrets.VITE_API_URL }}" ]; then
+            echo "VITE_API_URL is not set. Add it as a repository secret; without"
+            echo "it the built site points at localhost and no visitor can donate,"
+            echo "wear or withdraw."
+            exit 1
+          fi
+
       - run: npm run build --workspace @wearme/site
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: apps/site/dist
