@@ -889,6 +889,26 @@ a:focus-visible,
   word-break: break-all;
 }
 
+/*
+ * The donor's own entry, before the build publishes it.
+ *
+ * A dashed rule rather than a colour. Colour on this page means identifying
+ * information and nothing else, and "not published yet" is a fact about the
+ * catalogue's schedule, not about the identity — marking it in hue would be
+ * the one thing the palette is not allowed to say. So it shifts in value and
+ * in line style, the way a selected entry does.
+ */
+.entry--pending {
+  box-shadow: inset 2px 0 0 var(--bone-dim);
+}
+
+.entry__pending {
+  color: var(--bone-dim);
+  border-top: 1px dashed var(--rule);
+  padding-top: 0.5em;
+  width: 100%;
+}
+
 /* ---------------------------------------------------------------- dependency tree */
 
 .tree {

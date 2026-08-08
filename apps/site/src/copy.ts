@@ -97,6 +97,22 @@ export const PAYLOAD_INTRO = `This is the payload, complete and unedited. It is 
 
 export const REVOCATION_NOTE = `Keep this token. It is the only way to remove the entry, it is stored here as a hash and cannot be looked up or reissued, and it is shown once.`;
 
+/**
+ * What a donor is told about when their entry becomes visible to other people.
+ *
+ * The catalogue is a static file rebuilt on a schedule, so a donation is in the
+ * pool the instant it is accepted and in the published catalogue at the next
+ * build. Those are two different moments and the interface names both, because
+ * a donor who is shown their own entry and not told it is only shown to them
+ * would reasonably conclude that strangers can already see it.
+ */
+export const PENDING_PUBLICATION = `Your entry is in the pool now. The catalogue is rebuilt on a schedule rather than on every donation, so until the next build it is shown here to you and to nobody else. It is marked below wherever it appears. Withdrawing it does not wait for a build: that takes effect immediately.`;
+
+/** Marks the donor's own not-yet-published entry in the catalogue and the panel. */
+export const NOT_YET_PUBLISHED = `yours · not published yet`;
+
+export const NOT_YET_PUBLISHED_NOTE = `This is your own entry, and it is not in the published catalogue yet — you are seeing it because this browser donated it. Other people will see it at the next build.`;
+
 export const SYNTHETIC_DISCLOSURE = (synthetic: number, total: number, atLaunch: number): string =>
   `${synthetic} of the ${total} entries in this pool were manufactured rather than donated; ${atLaunch} of those were generated offline before the pool opened, so that the first visitor had something to be measured against. Which entries are which is not published and is not recoverable through the interface. Neither the visitor nor the artist can tell by looking.`;
 

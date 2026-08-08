@@ -1,0 +1,236 @@
+/**
+ * The pool (§8), reduced to what only a server can do.
+ *
+ * A browser fingerprint is almost certainly personal data under GDPR. The
+ * lawful basis here is explicit informed consent, freely given, with a plain
+ * revocation path: every donor keeps a token and can withdraw the identity at
+ * any time, which removes it from the catalogue and invalidates existing
+ * scripts on their next fetch.
+ *
+ * Meanwhile the same collection is performed at planetary scale under a
+ * legitimate-interest claim by companies that never show anyone the payload.
+ * The asymmetry is the point, and it is stated in the concept text rather than
+ * only implemented here.
+ *
+ * Six routes. The Fastify service had eleven, and seven of those turned out to
+ * be scaffolding: the catalogue, the statistics and the per-entry lookup are
+ * published as a static file the weekly build regenerates, and the report,
+ * consequence and forge-counter endpoints back features that are still
+ * deferred. What is left is the part that cannot be a file — writing into
+ * shared state, and honouring a withdrawal promptly enough to mean it.
+ *
+ * There is no request logger. Hono installs none by default, which satisfies
+ * by omission the guarantee the Fastify service needed a custom serialiser to
+ * keep: the User-Agent this service promises not to retain is never handed to
+ * anything that writes it down. What Cloudflare itself retains at the edge is
+ * outside this file, and is stated in the README rather than assumed away.
+ */
+
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
+
+import { fingerprintId } from '@wearme/core/canonical';
+import { bitsDestroyedBy } from '@wearme/core/entropy';
+import { donateSchema, idSchema, revokeSchema, wearSchema } from '@wearme/core/schema';
+import { emitUserscript, type SurfaceMode } from '@wearme/core/userscript';
+
+import {
+  countWear,
+  findIdentity,
+  hashToken,
+  identityExists,
+  insertIdentity,
+  listRevoked,
+  publicEntry,
+  readWearCount,
+  revokeIdentity,
+} from './db.js';
+import { take } from './ratelimit.js';
+
+export interface Env {
+  DB: D1Database;
+  ALLOWED_ORIGINS: string;
+  SITE_URL: string;
+  LIMITER_SECRET: string;
+}
+
+const app = new Hono<{ Bindings: Env }>();
+
+app.use('*', (c, next) => {
+  const allowed = c.env.ALLOWED_ORIGINS.split(',').map((s) => s.trim());
+  return cors({
+    origin: allowed.includes('*') ? '*' : allowed,
+    allowMethods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+    allowHeaders: ['content-type'],
+  })(c, next);
+});
+
+/** Only ever passed to the limiter, which hashes it under a rotating salt. Never stored. */
+const callerAddress = (c: { req: { header: (name: string) => string | undefined } }): string =>
+  c.req.header('CF-Connecting-IP') ?? 'unknown';
+
+function randomToken(bytes = 24): string {
+  const buf = new Uint8Array(bytes);
+  crypto.getRandomValues(buf);
+  return Array.from(buf, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+const surfaceMode = (value: string | undefined): SurfaceMode =>
+  value === 'perturb' ? 'perturb' : 'converge';
+
+// ---------------------------------------------------------------- withdrawals
+
+/**
+ * The ids withdrawn since the last catalogue rebuild.
+ *
+ * The catalogue is a static file, so a revoked entry would otherwise stay on
+ * display until the weekly build ran. The site fetches this on load and filters
+ * against it, which makes the removal immediate even though the file is not.
+ *
+ * The cache window is a browser-level minute: long enough that a visitor
+ * clicking through the piece is not re-fetching it constantly, short enough
+ * that "at any time" survives contact with the word.
+ */
+app.get('/revoked', async (c) => {
+  const ids = await listRevoked(c.env.DB);
+  c.header('cache-control', 'public, max-age=60');
+  return c.json({ ids });
+});
+
+// ---------------------------------------------------------------- wearing
+
+/**
+ * The script for one entry, served as a script.
+ *
+ * This exists so that wearing is one click. A userscript manager watches for
+ * navigations to a `.user.js` URL and offers to install what it finds there;
+ * hand it a Blob download instead and the visitor has to find the file and
+ * import it by hand, which is three steps and a manual for something that
+ * should be a button.
+ *
+ * Served inline rather than as an attachment, deliberately — `Content-Disposition:
+ * attachment` would make the browser save it and defeat the interception. A
+ * visitor with no manager installed sees the source, which is the correct
+ * fallback for a piece that expects to be read.
+ *
+ * This route is the reason the service exists at all. The script text is a pure
+ * function of the entry and could have been generated at build time and served
+ * as a file — but a file cannot be withdrawn, and `no-store` here is what makes
+ * revocation mean something on the next fetch.
+ */
+app.get('/identity/:id/script.user.js', async (c) => {
+  const parsed = idSchema.safeParse(c.req.param('id'));
+  if (!parsed.success) return c.json({ error: 'malformed id' }, 400);
+
+  const row = await findIdentity(c.env.DB, parsed.data);
+  if (!row) return c.json({ error: 'no entry with that id' }, 404);
+
+  const script = emitUserscript(publicEntry(row), {
+    siteUrl: c.env.SITE_URL,
+    canvasMode: surfaceMode(c.req.query('canvas')),
+    audioMode: surfaceMode(c.req.query('audio')),
+    hideOverrides: c.req.query('hide') === 'true',
+  });
+
+  c.header('content-type', 'text/javascript; charset=utf-8');
+  c.header('content-disposition', 'inline');
+  // A revoked identity must stop being wearable, so this is never cached.
+  c.header('cache-control', 'no-store');
+  return c.body(script);
+});
+
+app.post('/wear/:id', async (c) => {
+  if (!(await take(c.env.DB, c.env.LIMITER_SECRET, callerAddress(c), 'wear', 60))) {
+    return c.json({ error: 'too many wears in this window' }, 429);
+  }
+
+  const id = idSchema.safeParse(c.req.param('id'));
+  if (!id.success) return c.json({ error: 'malformed id' }, 400);
+
+  const parsed = wearSchema.safeParse(await c.req.json().catch(() => ({})));
+  if (!parsed.success) return c.json({ error: parsed.error.issues[0].message }, 400);
+
+  // `first` is asserted by the client, which stores whether it has worn this
+  // entry before. The server cannot verify it, because verifying it would mean
+  // keeping the per-visitor identifier this service refuses to keep. The
+  // interface states that the count is self-reported for exactly that reason.
+  if (!parsed.data.first) {
+    const current = await readWearCount(c.env.DB, id.data);
+    if (current === null) return c.json({ error: 'no entry with that id' }, 404);
+    return c.json({ id: id.data, wearCount: current, counted: false });
+  }
+
+  const wearCount = await countWear(c.env.DB, id.data);
+  if (wearCount === null) return c.json({ error: 'no entry with that id' }, 404);
+
+  return c.json({
+    id: id.data,
+    wearCount,
+    counted: true,
+    bitsDestroyed: bitsDestroyedBy(wearCount),
+  });
+});
+
+// ---------------------------------------------------------------- donating
+
+app.post('/identity', async (c) => {
+  if (!(await take(c.env.DB, c.env.LIMITER_SECRET, callerAddress(c), 'donate', 20))) {
+    return c.json({ error: 'too many donations from this connection in this window' }, 429);
+  }
+
+  const parsed = donateSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) {
+    return c.json({ error: parsed.error.issues[0].message, path: parsed.error.issues[0].path }, 400);
+  }
+  const body = parsed.data;
+
+  // Recomputed rather than trusted. The id is the hash of the vector or it is
+  // not the id, and a client that disagrees does not get to define it.
+  const id = fingerprintId(body.attrs);
+  if (id !== body.id) return c.json({ error: 'id does not match attrs' }, 400);
+
+  if (await identityExists(c.env.DB, id)) {
+    // The same signature donated twice is one entry. Saying so is more useful
+    // than a duplicate, and it is the first place a visitor learns that their
+    // browser is not unique after all.
+    return c.json({ id, alreadyPresent: true, revocationToken: null }, 200);
+  }
+
+  const token = randomToken();
+  await insertIdentity(c.env.DB, {
+    id,
+    attrs: body.attrs,
+    automation: body.automation,
+    revocationHash: hashToken(token),
+  });
+
+  // Returned exactly once. It is not stored in recoverable form, so it cannot be
+  // reissued, and the interface says so before the visitor closes the dialogue.
+  return c.json({ id, alreadyPresent: false, revocationToken: token }, 201);
+});
+
+app.delete('/identity/:id', async (c) => {
+  if (!(await take(c.env.DB, c.env.LIMITER_SECRET, callerAddress(c), 'revoke', 30))) {
+    return c.json({ error: 'too many attempts' }, 429);
+  }
+
+  const id = idSchema.safeParse(c.req.param('id'));
+  const body = revokeSchema.safeParse(await c.req.json().catch(() => null));
+  if (!id.success || !body.success) return c.json({ error: 'malformed request' }, 400);
+
+  const row = await findIdentity(c.env.DB, id.data);
+  if (!row) return c.json({ error: 'no entry with that id' }, 404);
+  if (!row.revocation_hash || row.revocation_hash !== hashToken(body.data.token)) {
+    return c.json({ error: 'that token does not match this entry' }, 403);
+  }
+
+  await revokeIdentity(c.env.DB, id.data);
+  return c.json({ revoked: true, id: id.data });
+});
+
+app.get('/health', async (c) => {
+  const row = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM identity').first<{ n: number }>();
+  return c.json({ ok: true, size: row?.n ?? 0 });
+});
+
+export default app;

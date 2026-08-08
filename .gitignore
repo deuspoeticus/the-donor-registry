@@ -1,5 +1,13 @@
 node_modules/
 dist/
+# Generated from data/bootstrap.json by @wearme/worker's seed:build.
+apps/worker/seed/
+# wrangler build output and local D1 state.
+apps/worker/.dryrun/
+apps/worker/.wrangler/
+# Local secrets for `wrangler dev`. The deployed values are set with
+# `wrangler secret put` and live only in Cloudflare.
+apps/worker/.dev.vars
 *.db
 *.db-shm
 *.db-wal
