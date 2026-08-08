@@ -41,6 +41,13 @@ export function svg(tag: string, attrs: Record<string, string | number> = {}): S
   return el;
 }
 
+/** A `<title>` child, which is how an SVG shape gets a tooltip and a name. */
+export function svgTitle(text: string): SVGElement {
+  const title = svg('title');
+  title.textContent = text;
+  return title;
+}
+
 export function clear(node: Node): void {
   while (node.firstChild) node.removeChild(node.firstChild);
 }
@@ -49,3 +56,9 @@ export function clear(node: Node): void {
 export const int = (n: number): string => Math.round(n).toLocaleString('en-GB');
 
 export const bits = (n: number): string => n.toFixed(2);
+
+/** A share of a whole, as whole percent. Used for counts, never for probabilities. */
+export const pct = (n: number): string => `${(n * 100).toFixed(n >= 0.995 || n === 0 ? 0 : 1)}%`;
+
+/** A probability, at the precision the model actually has. */
+export const prob = (n: number): string => n.toFixed(3);

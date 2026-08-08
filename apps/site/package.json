@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "The monument. Collects, measures, displays, and hands out the tooling.",
+  "description": "The instrument. Collects, measures, displays, and hands out the tooling.",
   "scripts": {
     "typecheck": "tsc --noEmit",
     "dev": "vite",
@@ -11,11 +11,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@wearme/core": "*",
-    "three": "^0.171.0"
+    "@wearme/core": "*"
   },
   "devDependencies": {
-    "@types/three": "^0.171.0",
     "typescript": "^5.7.2",
     "vite": "^6.0.7"
   }

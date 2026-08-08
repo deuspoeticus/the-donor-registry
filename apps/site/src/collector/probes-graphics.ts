@@ -27,6 +27,17 @@ function drawProbe(ctx: CanvasRenderingContext2D, width: number, height: number)
   ctx.fillRect(0, 0, width, height);
 
   ctx.fillStyle = '#101014';
+  /*
+    * This string does not change, ever, and it keeps the work's original name.
+    *
+    * It is not a label — it is part of the measurement. Every canvas hash in the pool
+    * was taken by drawing exactly these glyphs at exactly this size, so altering a
+    * character here would give every future visitor a canvas value incomparable with
+    * all two hundred already stored: the attribute would silently become an
+    * identifier, the entropy model would refit around it, and every published figure
+    * would be measured against a pool it no longer matches. The piece was renamed;
+    * the probe is a physical constant.
+    */
   ctx.font = '17px "Times New Roman", serif';
   ctx.fillText('WEAR ME — 1 in N ¶ßæ', 4, 22);
 

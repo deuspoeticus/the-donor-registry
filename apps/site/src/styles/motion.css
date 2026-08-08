@@ -1,0 +1,409 @@
+/*
+ * Hover.
+ *
+ * One gesture, applied everywhere: **the thing under the cursor inverts.** Paper
+ * becomes ink, ink becomes paper, and whatever was said in an accent is restated in
+ * that accent's lit value so it survives the new ground. That is it. A tile, a table
+ * row, a catalogue entry, a nav link, a button, a loop step, a keyed row — all the
+ * same move, so the page has one hover behaviour to learn rather than nine.
+ *
+ * The inversion is done by swapping declared colours and never with
+ * `filter: invert()`. Filtering would invert the palette along with the surface, and
+ * on this site the palette is a notation: red means exposure and turquoise means
+ * inference, and inverting red *yields* turquoise. A warning would come back as an
+ * inference. The only true `invert()` on the page is the 260 ms full-frame flash in
+ * styles/post.css, where inverting everything is the point.
+ *
+ * ---------------------------------------------------------------- legibility
+ *
+ * An earlier version of this file blurred things out of focus on hover — a figure
+ * defocused so its definition could fade in over the top of it, a hash softened
+ * behind an offer. It was a nice idea about measurement disturbing what it measures,
+ * and it was wrong: at the exact moment you were reading the claim, you could no
+ * longer read the number it was a claim about.
+ *
+ * So: **nothing on this page is ever made less readable by being pointed at.** Every
+ * value stays at full opacity and full sharpness. Blur is permitted on decoration
+ * only — a rule, a mark, an offset — and displacement stays under three pixels.
+ * Anything that recedes recedes by *value*, to a colour that is still comfortably
+ * legible, never to a blur and never to a low opacity.
+ *
+ * Everything is behind `@media (hover: hover)`. On a touch screen there is no hover
+ * state, only a tap that fires it and leaves it stuck.
+ */
+
+@media (hover: hover) and (pointer: fine) {
+  /* ------------------------------------------------------------ tiles
+   *
+   * The statistic inverts and its claim comes up with it. The definition is in the
+   * flow at all times (styles/board.css) rather than hidden behind the figure, so the
+   * hover changes the ground under a complete reading instead of trading one half of
+   * it for the other.
+   */
+  /* Every inverted ground re-points the sigils' cool accent; see tokens.css. */
+  .tile:hover,
+  .kv__row:hover,
+  .nav__link:hover,
+  .loop__step:hover,
+  .tier:hover,
+  .entry:hover,
+  .table tbody tr:hover {
+    --sigil-cyan: var(--cyan-lit);
+  }
+
+  .tile:hover {
+    background: var(--ink);
+  }
+
+  .tile:hover .tile__value {
+    color: var(--paper);
+    transform: translateY(-2px);
+    transition: transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1), color 140ms linear;
+  }
+
+  .tile:hover .tile__value--exposed {
+    color: var(--red-lit);
+  }
+
+  .tile:hover .tile__value--inferred {
+    color: var(--cyan-lit);
+  }
+
+  .tile:hover .tile__label {
+    color: var(--red-lit);
+    border-top-color: var(--ink-2);
+  }
+
+  .tile:hover .tile__def {
+    color: var(--paper);
+  }
+
+  /* ------------------------------------------------------------ the offer
+   *
+   * Inversion means wearing, and this is the surface where wearing is offered: the
+   * tile turns into an ink plate holding out somebody else's face, with the manicule
+   * stepping toward the words. The hash stays exactly as legible as it was.
+   */
+  .entry:hover {
+    background: var(--ink);
+    color: var(--ink-4);
+  }
+
+  .entry:hover .entry__id {
+    color: var(--paper);
+  }
+
+  .entry:hover .entry__line {
+    color: var(--ink-4);
+  }
+
+  .entry:hover .entry__offer {
+    color: var(--paper);
+    border-top-color: var(--ink-2);
+  }
+
+  .entry:hover .entry__offer .mark {
+    color: var(--red-lit);
+    transform: translateX(3px);
+    transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), color 130ms linear;
+  }
+
+  .entry:hover .entry__pending {
+    color: var(--paper);
+    border-top-color: var(--ink-2);
+  }
+
+  /* ------------------------------------------------------------ table rows
+   *
+   * The row inverts; the value steps three pixels out from under its label and splits
+   * into its two channels as it goes; the hairline bar under the number goes to full.
+   * The row is more readable hovered than not, which is the correct direction for a
+   * table of forty rows of monospace.
+   */
+  .table tbody tr:hover {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .table tbody tr:hover td {
+    color: var(--paper);
+    border-bottom-color: var(--ink-2);
+  }
+
+  .table tbody tr:hover td.value {
+    color: var(--paper);
+    transform: translateX(3px);
+    text-shadow: 0.6px 0 rgba(255, 92, 77, 0.6), -0.6px 0 rgba(63, 246, 225, 0.5);
+    transition: transform 150ms cubic-bezier(0.2, 0.8, 0.2, 1), color 130ms linear;
+  }
+
+  .table tbody tr:hover td.num--inferred {
+    color: var(--cyan-lit);
+  }
+
+  .table tbody tr:hover td.num--exposed {
+    color: var(--red-lit);
+  }
+
+  .table tbody tr:hover .bar {
+    background: var(--red-lit);
+    opacity: 1;
+  }
+
+  .table tbody tr:hover .dimmer {
+    color: var(--ink-4);
+  }
+
+  /* ------------------------------------------------------------ keyed rows */
+  .kv__row:hover {
+    background: var(--ink);
+  }
+
+  .kv__row:hover .kv__key {
+    color: var(--red-lit);
+  }
+
+  .kv__row:hover .kv__value,
+  .kv__row:hover .kv__value--fact {
+    color: var(--paper);
+  }
+
+  .kv__row:hover .kv__value--inferred {
+    color: var(--cyan-lit);
+  }
+
+  .kv__row:hover .kv__value--exposed {
+    color: var(--red-lit);
+  }
+
+  /* ------------------------------------------------------------ bar rows */
+  .bars__row:hover .bars__label {
+    color: var(--ink);
+  }
+
+  .bars__row:hover .bars__fill {
+    opacity: 1;
+  }
+
+  .bars__row:hover .bars__track {
+    border-color: var(--ink);
+  }
+
+  /* ------------------------------------------------------------ running head */
+  .nav__link:hover {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .nav__link:hover .nav__num {
+    color: var(--red-lit);
+  }
+
+  .nav__link:hover .nav__name {
+    transform: translateX(2px);
+    transition: transform 140ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .nav__mark:hover .nav__title {
+    color: var(--red-ink);
+  }
+
+  /* ------------------------------------------------------------ sector heads
+   *
+   * The mark turns a quarter turn and the double rule above the address goes red: the
+   * sector acknowledging that it has been addressed. Nothing here is text, so this is
+   * where the motion is allowed to be a joke.
+   */
+  .sector__head:hover .sector__sigil {
+    color: var(--red-ink);
+    transform: rotate(-12deg) scale(1.12);
+  }
+
+  .sector__head:hover {
+    border-top-color: var(--red);
+  }
+
+  /* ------------------------------------------------------------ the proposition
+   *
+   * The one sentence that states what the piece is, and the only element whose split
+   * is not driven by a measurement. Touching the sentence about your face pulls it
+   * into its channels — a fraction of an em, so it reads as pressure on the letters
+   * rather than as damage to them.
+   */
+  .proposition:hover,
+  .masthead__slogan:hover {
+    text-shadow: 0 0 var(--glow) rgba(11, 11, 13, 0.3),
+      0.035em 0 rgba(255, 42, 23, 0.75), -0.035em 0 rgba(0, 114, 101, 0.7);
+    transition: text-shadow 180ms linear;
+  }
+
+  /* ------------------------------------------------------------ the loop */
+  .loop__step:hover {
+    background: var(--ink);
+  }
+
+  .loop__step:hover .loop__name {
+    color: var(--paper);
+  }
+
+  .loop__step:hover .loop__body {
+    color: var(--paper);
+  }
+
+  .loop__step:hover .loop__num,
+  .loop__step:hover .loop__code {
+    color: var(--paper);
+  }
+
+  .loop__step:hover .loop__cost {
+    color: var(--red-lit);
+    border-top-color: var(--ink-2);
+  }
+
+  /* ------------------------------------------------------------ controls
+   *
+   * A button inverts and snaps a red offset out from under itself. The offset is not a
+   * shadow — the page has no light source — it is the same rectangle, displaced, the
+   * way a misregistered second pass shows the edge of the first.
+   */
+  button:hover:not(:disabled),
+  .button:hover {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+    box-shadow: 3px 3px 0 var(--red);
+  }
+
+  button:hover:not(:disabled) .button__mark,
+  .button:hover .button__mark {
+    color: var(--red-lit);
+    transform: translateX(3px);
+  }
+
+  .button--rite:hover {
+    background: var(--red);
+    color: var(--paper);
+    border-color: var(--red);
+    box-shadow: 4px 4px 0 var(--ink);
+  }
+
+  .button--rite:hover .button__mark,
+  .button--rite:hover .button__sigil {
+    color: var(--paper);
+  }
+
+  button:hover:not(:disabled) .button__sigil,
+  .button:hover .button__sigil {
+    color: var(--red-lit);
+    transform: translateX(3px);
+  }
+
+  /*
+   * The tiers stay symmetrical under the cursor too: same inversion, same duration,
+   * for all three, and no lift or shadow on any of them. Only the cost line takes the
+   * tier's own colour, because it is stating a fact about that tier and not selling
+   * it.
+   */
+  .tier:hover {
+    background: var(--ink);
+  }
+
+  .tier:hover .tier__name,
+  .tier:hover .tier__body,
+  .tier:hover .tier__sigil {
+    color: var(--paper);
+  }
+
+  .tier:hover .tier__note {
+    color: var(--ink-4);
+    border-top-color: var(--ink-2);
+  }
+
+  .tier:hover .tier__note--transmits {
+    color: var(--red-lit);
+  }
+
+  /* ------------------------------------------------------------ the rites */
+
+  /* The plate itself does not invert — it is a document, and a document you point at
+     does not become a different document. The seal turns. */
+  .rite:hover .rite__seal {
+    transform: rotate(-18deg) scale(1.08);
+    transition: transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  /* ------------------------------------------------------------ the tree
+   *
+   * Point at a node and the model narrows to it: the node and its label go red, the
+   * edges that touch it light up (done in model.ts, which is the one part of this a
+   * selector cannot express), and every other edge recedes. The other labels stay
+   * exactly where they were and exactly as sharp — an earlier version blurred them,
+   * which made the drawing illegible in order to demonstrate that it was legible.
+   */
+  .tree:hover .tree__edge {
+    stroke-opacity: 0.12;
+  }
+
+  .tree__group:hover .tree__node {
+    fill: var(--red);
+  }
+
+  .tree__group:hover .tree__label {
+    fill: var(--red-ink);
+    font-weight: 700;
+  }
+
+  /* ------------------------------------------------------------ the matrix */
+  .matrix__cell:hover {
+    stroke: var(--ink);
+    stroke-width: 1.5;
+  }
+
+  /* ------------------------------------------------------------ windows
+   *
+   * A monospace window is the instrument's readout screen, and pointing at one lights
+   * its frame rather than disturbing its contents. Machine output is the last thing on
+   * this page that should move while you are reading it.
+   */
+  .window:hover {
+    border-color: var(--ink);
+  }
+
+  .window:hover .window__bar {
+    background: var(--ink);
+    color: var(--paper);
+    border-bottom-color: var(--ink);
+  }
+
+  .window:hover .window__count {
+    color: var(--cyan-lit);
+  }
+
+  /* ------------------------------------------------------------ toggles */
+  .toggle:hover {
+    color: var(--ink);
+  }
+
+  .toggle:hover strong {
+    color: var(--red-ink);
+  }
+}
+
+/*
+ * Reduced motion.
+ *
+ * The transitions go; the states do not. Every rule above still resolves to its
+ * hovered value, it simply arrives at once. A visitor who asked for less movement
+ * still gets the inversion and still gets the offer — the only thing they are spared
+ * is the travel.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

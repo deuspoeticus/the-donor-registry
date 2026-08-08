@@ -126,9 +126,9 @@ export function measure(model: EntropyModel, attrs: AttrVector): EntropyReport {
  * Bits destroyed by wearing (§3).
  *
  * An identity worn by k distinct visitors has its surprisal fall from
- * -log2(p) toward -log2(k·p). The difference is log2(k). This is the monument's
- * inscription, so it is computed from wear counts that came from real events
- * and from nothing else.
+ * -log2(p) toward -log2(k·p). The difference is log2(k). It is published as a
+ * headline figure in the census, so it is computed from wear counts that came
+ * from real events and from nothing else.
  */
 export function bitsDestroyed(wearCounts: readonly number[]): number {
   let total = 0;
@@ -143,16 +143,19 @@ export function bitsDestroyedBy(wearCount: number): number {
 }
 
 /**
- * Corruption magnitude for the shader (§6b).
+ * Corruption magnitude (§6b).
  *
- * 0 is the least surprising entry in the pool, 1 the most. It is measured
- * against the *unclamped* model score for a reason worth stating plainly: once
- * a pool is small enough that every entry saturates log2(N), the clamped figure
- * is identical for everybody and the monument becomes a field of identical
- * ruins. The headline number stays clamped, because that is a claim about how
- * identifiable someone is and the pool cannot support a larger one. This is not
- * that claim. It is a ranking within the pool, and it is labelled as one
- * wherever it appears.
+ * 0 is the least surprising entry in the pool, 1 the most. It drives how far the
+ * page's own post-processing degrades, and it is the axis the census plots the
+ * pool's spread along.
+ *
+ * Measured against the *unclamped* model score, for a reason worth stating
+ * plainly: once a pool is small enough that every entry saturates log2(N), the
+ * clamped figure is identical for everybody, and both the ranking and the
+ * distribution collapse into one value. The headline number stays clamped,
+ * because that is a claim about how identifiable someone is and the pool cannot
+ * support a larger one. This is not that claim. It is a ranking within the pool,
+ * and it is labelled as one wherever it appears.
  */
 export interface CorruptionScale {
   min: number;

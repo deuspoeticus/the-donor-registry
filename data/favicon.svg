@@ -1,15 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="WEAR ME">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="The Donor Registry">
   <!--
-    Three steles on the dark plane: the field, reduced to the smallest mark that
-    still reads at sixteen pixels. Heights are uneven because the field is —
+    Three bars on paper: the pool's own spread, reduced to the smallest mark that
+    still reads at sixteen pixels. Heights are uneven because the spread is —
     magnitude is surprisal, and a rank of identical bars would be the one thing
-    the piece is about not being true.
+    the piece is about not being true. The tallest is red: on this site red means
+    exposure, and the strangest entry in a pool is the most exposed thing in it.
 
-    Self-hosted and monochrome, per the site's own rule: no third-party request
-    is made for anything on this page, including its lettering and its icon.
+    Ink on off-white, matching the ground the page is now printed on. Self-hosted
+    and drawn here rather than fetched, per the site's own rule: no third-party
+    request is made for anything on this page, including its lettering and its icon.
   -->
-  <rect width="32" height="32" fill="#08080a"/>
-  <rect x="6"  y="14" width="4" height="12" fill="#d8d4c8"/>
-  <rect x="14" y="7"  width="4" height="19" fill="#d8d4c8"/>
-  <rect x="22" y="18" width="4" height="8"  fill="#8a8a94"/>
+  <rect width="32" height="32" fill="#f2f0e9"/>
+  <rect x="0" y="0" width="32" height="32" fill="none" stroke="#0b0b0d" stroke-width="2"/>
+  <rect x="6"  y="14" width="4" height="12" fill="#0b0b0d"/>
+  <rect x="14" y="7"  width="4" height="19" fill="#cf1a06"/>
+  <rect x="22" y="18" width="4" height="8"  fill="#6b6a6f"/>
 </svg>

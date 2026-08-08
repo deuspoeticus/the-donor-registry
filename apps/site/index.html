@@ -3,7 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>WEAR ME — a fingerprint commons</title>
+    <meta name="color-scheme" content="light" />
+    <title>THE DONOR REGISTRY: Wear Me. — a fingerprint commons</title>
     <meta
       name="description"
       content="A public pool of browser signatures. Measure yours, see what it says, and put it in the commons for anyone to wear."
@@ -16,8 +17,6 @@
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
-    <canvas id="monument" aria-hidden="true"></canvas>
-
     <noscript>
       <div class="noscript">
         This page measures your browser in front of you and shows you the result. It needs JavaScript
@@ -34,6 +33,28 @@
     <div id="boot" class="boot">
       <p class="boot__line">Loading the pool.</p>
       <p class="boot__note">Nothing has been measured yet.</p>
+    </div>
+
+    <!--
+      The post-processing layer (§6b).
+
+      It sits in the markup rather than being built by script because it is part of
+      the surface the page is drawn on, not part of what the page says: it exists
+      before the first render and survives every one after it. Every layer is a
+      readout driven by custom properties that ui/post.ts writes from the
+      measurement — see styles/post.css for the mapping. With nothing measured, the
+      magnitude is zero and what is left is an instrument idling.
+
+      aria-hidden throughout: there is no information here that is not stated in
+      words somewhere else on the page.
+    -->
+    <div id="post" class="post" aria-hidden="true" data-signal="on" data-channel="none">
+      <div class="post__vignette"></div>
+      <div class="post__scan"></div>
+      <div class="post__grain"></div>
+      <div class="post__band"></div>
+      <div class="post__dropout"></div>
+      <div id="flash" class="post__flash"></div>
     </div>
 
     <script type="module" src="/src/main.ts"></script>

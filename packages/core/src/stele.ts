@@ -1,15 +1,17 @@
 /**
- * Stele geometry (§6a).
+ * Deterministic form, per identity (§6a).
  *
- * Each identity is one stele on a dark plane, and its form is derived
- * deterministically from sha256(id) through a seeded PRNG. The same hash always
- * yields the same object — that is the whole reason the field is a monument and
- * not a decoration. Nothing here reads the attribute *values*; the shape comes
- * from the digest alone, so an identity's form gives away nothing about what it
- * contains.
+ * A form derived from sha256(id) through a seeded PRNG: height, taper, twist,
+ * facet count, relief. The same hash always yields the same object, which is the
+ * whole reason a drawing of the pool can be a record rather than a decoration.
+ * Nothing here reads the attribute *values*; the shape comes from the digest
+ * alone, so an identity's form gives away nothing about what it contains.
  *
- * The corruption applied on top of this form is a separate matter and comes
- * from the measurement (§6b), not from here.
+ * Nothing currently draws it. The renderer that did — a WebGL field of steles —
+ * has been removed, and what replaces it has not been decided. This is kept
+ * because it is the specified derivation rather than one renderer's opinion about
+ * it: it is pure, tested, and whatever the artwork becomes will need exactly this
+ * function to stay a record of the pool instead of an illustration of it.
  */
 
 import { sha256 } from './hash.js';

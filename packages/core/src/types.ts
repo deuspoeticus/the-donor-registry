@@ -76,7 +76,8 @@ export interface EntropyReport {
    * which is why `modelledBits` is clamped. It exists because comparing two
    * entries to each other is a different question from claiming how identifiable
    * either one is, and once everybody is pinned to the ceiling the clamped
-   * figure can no longer tell them apart. The monument ranks with this.
+   * figure can no longer tell them apart. The corruption magnitude and the
+   * census distribution both rank with this.
    */
   rawModelledBits: number;
   /** 2^modelledBits, clamped to the ceiling. The headline. */

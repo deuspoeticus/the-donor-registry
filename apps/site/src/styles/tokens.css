@@ -1,0 +1,259 @@
+/*
+ * Type, palette, and the contract they are held to (§6e).
+ *
+ * ---------------------------------------------------------------- the ground
+ *
+ * Paper. Off-white, faintly warm, with ink on it.
+ *
+ * This was a near-black screen, and it read as a dashboard from the near future —
+ * which is the one thing this piece is not about. It is a *registry*: a ledger of
+ * faces, kept by an instrument that is old and has been given capabilities it was
+ * never built for. A ledger is paper. Inverting the ground did more for that than
+ * any amount of ornament could, because it changes what kind of object the page is
+ * before a word of it is read.
+ *
+ * ---------------------------------------------------------------- the palette
+ *
+ * Four values and a grey ramp. Nothing on this page is coloured for decoration,
+ * and each of the two accents means exactly one thing everywhere it appears.
+ *
+ *   INK        a measured fact. A value read off a browser, a count taken from
+ *              the pool, an identifier. What is.
+ *
+ *   RED        exposure, and irreversibility. What leaves this browser, what
+ *              singles somebody out, what cannot be taken back without the
+ *              token. The colour of the thing this piece is about.
+ *
+ *   TURQUOISE  inference. What the model computes rather than reads: mutual
+ *              information, modelled bits, forged identities, the automation
+ *              estimate, the dependency tree. Never a measurement.
+ *
+ *   GREY       scaffolding. Rules, addresses, labels, chrome. Says nothing.
+ *
+ * So the two accents are a real opposition and not a pair of highlights: red is
+ * the world reading you, turquoise is the machine imagining you, and ink is the
+ * record that neither of them gets to argue with.
+ *
+ * Each accent is declared twice, and this is not a second colour. `--red` and
+ * `--cyan` are the hues, used for fills, rules, marks and anything sitting on a
+ * dark ground. `--red-ink` and `--cyan-ink` are the same hues taken down in value
+ * far enough to be *read* as text on paper — bright turquoise on off-white is
+ * about 1.4:1, which is not a colour choice, it is an absence of text. The `-lit`
+ * variants are for the inverted state, where the ground is ink and the accents
+ * have to come back up. One hue, three grounds, three values.
+ *
+ *   INVERSION  is the fifth term, and it means wearing. A surface that swaps
+ *              ground for figure is a surface presenting somebody else's face.
+ *              It is used for exactly that and for the instant a state changes,
+ *              which is the same event seen from the other side. It is done by
+ *              swapping declared colours, never by `filter: invert()`, because
+ *              inverting red yields turquoise and the notation would invert with
+ *              the surface — a red warning would come back as an inference.
+ *
+ * ---------------------------------------------------------------- the faces
+ *
+ * Three are carried, and one is borrowed.
+ *
+ *   Jacquard 24            display. A bitmap serif on a 24-unit grid: elegant,
+ *                          old, and visibly quantised. The registry's own hand.
+ *   Archivo                body and interface. A neo-grotesque with Swiss bones
+ *                          and, unusually, a real width axis — so the labels and
+ *                          the addresses are genuinely condensed rather than
+ *                          squeezed. Set tight throughout.
+ *   Noto Sans Symbols 2    the notation, in two registers: instrumentation, and
+ *                          the alchemical marks for acts that cannot be undone.
+ *                          See ui/glyphs.ts.
+ *
+ * The monospace is *not* carried. It resolves to whatever terminal face the
+ * visitor's machine has, which is the one typographic decision on this page the
+ * visitor's own system gets to make — and on a site about machines that give
+ * themselves away by their font metrics, a stack that reads differently on every
+ * machine is the honest choice rather than an oversight. Because it is unknowable,
+ * it is never used loose in running text: every monospace run on this page sits
+ * inside a bounded, labelled window (see `.window` in styles/data.css), so that an
+ * unpredictable face can only ever change the inside of a frame the design
+ * controls.
+ *
+ * All three are self-hosted and fingerprinted by the build. No request leaves this
+ * origin for lettering; see `scripts/fetch-fonts.mjs`.
+ */
+
+/* ---------------------------------------------------------------- Jacquard 24 */
+
+@font-face {
+  font-family: 'Jacquard 24';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/jacquard24-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Jacquard 24';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/jacquard24-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0,
+    U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* ---------------------------------------------------------------- Archivo */
+
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  font-display: swap;
+  src: url('../fonts/archivo-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  font-display: swap;
+  src: url('../fonts/archivo-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0,
+    U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* ---------------------------------------------------------------- the notation
+ *
+ * The declared range is narrower than the one the subsetter reports. Its file
+ * happens to contain `=` and a combining solidus, picked up as by-products of the
+ * requested glyphs, and if they were declared here every equals sign in every
+ * readout on this page would resolve to the symbol face instead of the monospace it
+ * is set in. The range below is the notation and nothing else.
+ */
+
+@font-face {
+  font-family: 'Noto Sans Symbols 2';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('../fonts/symbols2-ui.woff2') format('woff2');
+  unicode-range: U+2193, U+2197, U+2211, U+2248, U+2261, U+2295, U+2297-2298, U+22A5,
+    U+2316, U+2460-246B, U+24EA, U+25A3, U+25B2, U+25B8, U+25BE, U+25C9, U+25D0, U+26A0,
+    U+2713, U+2715;
+}
+
+/* ---------------------------------------------------------------- tokens */
+
+:root {
+  /*
+   * The ground: paper, and two steps down into it.
+   *
+   *   --paper    the sheet.
+   *   --paper-2  a zebra row, a caption band. Barely a step.
+   *   --sink     a sunk panel: a window, a keyed readout, a bulletin. Every text
+   *              colour below is measured against *this*, not against --paper,
+   *              because this is the darkest ground any of them is set on.
+   */
+  --paper: #f2f0e9;
+  --paper-2: #eeebe2;
+  --sink: #eae7dd;
+  --rule: #c9c4b6;
+  --rule-lit: #a49d8c;
+
+  /* the figure */
+  --ink: #0b0b0d;
+  --ink-2: #3a3a3f;
+  --ink-3: #656469;
+  /*
+   * Graphics only: rules, ticks, dormant marks, the inactive lamp. It measures
+   * about 3.2:1 on paper, which is enough for a non-text element and is not enough
+   * for a word — every small-caps label and every readout key uses --ink-3, which
+   * measures 4.7:1. Do not set type in this value.
+   */
+  --ink-4: #7c7a73;
+
+  /*
+   * The two chromatic events. One hue each, at three values: the hue itself for
+   * fills and marks, `-ink` for text on paper, `-lit` for text on ink.
+   */
+  --red: #ff2a17;
+  --red-ink: #bf1705;
+  --red-lit: #ff5c4d;
+
+  --cyan: #17f0d8;
+  --cyan-ink: #006a5e;
+  --cyan-lit: #3ff6e1;
+
+  /*
+   * What a sigil's kept hue resolves to (ui/sigils.ts).
+   *
+   * Separate properties rather than the accents directly, because a sigil sits on both
+   * grounds and has to be re-pointed on the inverted one: --cyan-ink is a text value
+   * tuned for paper and disappears on ink. Everything that inverts re-declares these —
+   * see chrome.css, controls.css and motion.css.
+   */
+  --sigil-red: var(--red);
+  --sigil-cyan: var(--cyan-ink);
+
+  /* faces */
+  --font-display: 'Jacquard 24', 'Georgia', 'Times New Roman', serif;
+  --font-sans: 'Archivo', 'Helvetica Neue', Helvetica, -apple-system, 'Segoe UI', Arial,
+    sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Mono', 'SFMono-Regular', Menlo, Consolas,
+    'Liberation Mono', monospace;
+  --font-mark: 'Noto Sans Symbols 2', 'Segoe UI Symbol', 'Apple Symbols', sans-serif;
+
+  /* the scale */
+  --t-mega: clamp(3.25rem, 11vw, 8.5rem);
+  --t-hero: clamp(1.9rem, 5vw, 3.5rem);
+  --t-fig: clamp(2.25rem, 5.5vw, 4.5rem);
+  --t-fig-sm: clamp(1.5rem, 3.2vw, 2.375rem);
+  --t-lg: clamp(1.3rem, 2.5vw, 1.8rem);
+  --t-md: 1.0625rem;
+  --t-sm: 0.9375rem;
+  --t-data: 0.8125rem;
+  --t-label: 0.6875rem;
+  --t-micro: 0.625rem;
+
+  /* the board */
+  --gutter: clamp(1rem, 3.2vw, 3rem);
+  --frame: 96rem;
+  --measure: 64ch;
+  --rail: 5.5rem;
+  /*
+   * The head got taller. It was 3rem with the sector names at eleven pixels, condensed
+   * to 82% and tracked out to 0.13em — three separate decisions all working to make the
+   * one row you can never scroll away from the hardest row on the page to read. The
+   * names now run at reading size with a sigil beside each, and the strip below has room
+   * for eighteen-pixel sprites.
+   */
+  --nav-h: 4rem;
+  --status-h: 2.25rem;
+  --head-h: calc(var(--nav-h) + var(--status-h));
+
+  /*
+   * Tracking. Narrow throughout — Archivo is a grotesque and grotesques are set
+   * tight; the default fitting reads as a website and the tight fitting reads as
+   * printed matter. The tracked-out values are for small caps only, where the
+   * letterforms need the air to stay distinguishable.
+   */
+  --track-body: -0.019em;
+  --track-display: -0.035em;
+  --track-label: 0.13em;
+  --track-caps: 0.07em;
+
+  /*
+   * Post-processing inputs (§6b). Written by ui/post.ts from the measurement and
+   * read by nothing but styles/post.css. Zero is the resting state: an unmeasured
+   * page has no corruption to render and does not invent any.
+   */
+  --glitch: 0;
+  --channel-hue: 0deg;
+  --signal: 1;
+}

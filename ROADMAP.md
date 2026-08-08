@@ -4,7 +4,7 @@ Working notes on what shipped and what's left. `README.md` documents the piece;
 `SPEC.md` is the full build specification. This file tracks execution status
 against both, for future reference.
 
-Last updated: 2026-08-07.
+Last updated: 2026-08-08.
 
 ---
 
@@ -14,14 +14,76 @@ Last updated: 2026-08-07.
 
 **Repo:** [deuspoeticus/the-donor-registry](https://github.com/deuspoeticus/the-donor-registry), public.
 
-What works right now: the consent gate (all three tiers), the monument (field +
-close-up, glitch mapping for surprisal and dominant-attribute character), the
-collector, the entropy readout with the observed/modelled gap, the client-side
-forge with the coherence gate and dependency-tree render, and the catalogue.
+What works right now: one page of eleven fixed sector addresses with every jump a
+scroll, the pool census in front of the consent gate, the gate itself (all three
+tiers), the collector, the entropy readout with the observed/modelled gap, the
+client-side forge with the coherence gate, the dependency tree with the full
+mutual-information matrix beside it, the catalogue, the three rites (donation,
+extraction, withdrawal), and the glitch mapping driving the page's own
+post-processing layer.
 Donation and wearing work but are **local to each visitor's browser** — the
 pool service (`apps/api`) isn't hosted anywhere yet, so the site correctly
 falls back to the seeded `data/bootstrap.json` and says so on screen rather
 than pretending otherwise.
+
+### 2026-08-08 (fifth session) — two notations
+
+- **The mark set culled from 71 to 19.** Everything kept is used somewhere in the
+  interface *and* is the right character rather than an evocative one. What went was
+  atmosphere: fleurons beside the running head, planetary signs for gold and silver, a
+  lozenge for "an entry", a power symbol for consent.
+- **Sigils.** Twenty downsampled emoji for the things marks were being stretched to
+  cover — sectors, tiers, rites, the status strip. Twemoji at 72px (CC-BY 4.0),
+  area-downsampled to 16, desaturated to four bands of `currentColor` so they invert with
+  whatever they sit on, three keeping one hue where the hue is the meaning. The PNG
+  decoder is hand-rolled on `zlib`; pulling an image library in to read twenty 800-byte
+  files was the worse trade. Pixel grids are committed as readable rows, so a bad
+  downsample shows up in a diff.
+  - **WhatsApp's set was the ask and cannot be used** — Meta's designs, not licensed for
+    redistribution, and hotlinking would break the no-third-party-request rule.
+- **The division:** if it has a plural it is a sigil, if it takes arguments it is a mark.
+  Sigils also have a ~16px floor, so the keyed readouts and table cells keep marks.
+- **The cursors are now three of the same sprites**, generated at boot from the same data
+  rather than hand-written twice in CSS.
+- **The nav got bigger.** 4rem + 2.25rem strip, names at reading size instead of 11px
+  condensed-and-tracked, a sigil per address. Names lost their definite articles, which is
+  what made the row fit. Above ~1760px every address fits; below it the row scrolls with a
+  faded edge, and the fade is removed where it would be lying.
+
+### 2026-08-08 (fourth session) — the register
+
+The design read as a dashboard from the near future, which is the one thing the piece
+is not. It is now a **registry**: a ledger, on paper, kept by an old instrument that
+has been given capabilities it was never built for.
+
+- **The ground inverted.** Off-white paper, ink text; red and turquoise unchanged as
+  hues, and each now declared three times — `--red`/`--cyan` for fills, `-ink` for
+  text on paper, `-lit` for text on ink. Every text value was measured against the
+  darkest ground it is actually set on, not the lightest: the sunk panels are darker
+  than the sheet, and values tuned against the sheet came in short inside a window.
+- **Inter out, Archivo in.** A neo-grotesque in the Haas line with a real width axis,
+  so labels and addresses are genuinely condensed rather than squeezed. Tracking
+  narrowed throughout (`-0.019em` body, `-0.035em` display).
+- **The monospace is confined.** It is the one face not carried, so it is no longer
+  set loose in text: every run of it now sits inside a framed, captioned `.window`.
+  Prose that was in monospace because it looked technical moved to `.gloss`.
+- **Hover rewritten.** One gesture — the thing under the cursor inverts — and one rule
+  that outranks the idea: nothing is ever made less readable by being pointed at. The
+  blur-and-fade tile behaviour is gone; the definition it was hiding is now in the
+  flow and legible at all times. Inversion is done by swapping declared colours, never
+  `filter: invert()`, because inverting red yields turquoise and the notation would
+  invert with the surface.
+- **The two rites** (SPEC §6h). Giving a signature and taking a face are boxed,
+  sealed and set apart from the readings, with the consequence on its own line. Weight,
+  not steps: no rite adds a click, and the gate stays symmetrical.
+- **Cursors.** A quill nib, a manicule and an hourglass, drawn on a 24-unit grid.
+  Encoding gotcha worth remembering: `data:image/svg+xml,` + percent-encoding, never
+  `;utf8,` — the mismatch fails silently to the system cursor.
+- **The tree got room.** 1560×760, elliptical rings, labels above/below near the
+  vertical axis instead of colliding sideways, and the rings themselves now drawn.
+- **The name.** THE DONOR REGISTRY: Wear Me. The one place the old string stays is the
+  canvas probe text, which is part of the measurement rather than a label — the
+  reasoning is written next to it in `probes-graphics.ts`.
 
 ### Fixed 2026-08-07 (second session) — navigation, hierarchy, message
 
@@ -84,10 +146,12 @@ Net: 10,898px → 7,205px on the measured path, with every section addressable.
       `POST /wear/:id`. `apps/api/src/ratelimit.ts` exists — confirm it
       matches the SPEC §8 design (rotating salted-hash buckets regenerated
       every 10 minutes, no retained address) and is actually applied.
-- [ ] **Code-split the site bundle.** Currently 577KB (mostly Three.js) in
-      one chunk — Vite warns about it. Use
-      `build.rollupOptions.output.manualChunks` or dynamic-import the
-      monument scene.
+- [x] **Code-split the site bundle.** Resolved by deletion rather than by
+      splitting. It was 577KB in one chunk, almost all of it Three.js; Three.js
+      left with the stele field (SPEC §6a) and the bundle is now ~125KB with no
+      runtime dependency in the browser at all. If the artwork returns as WebGL
+      this comes back, and the answer then is a dynamic import rather than a
+      manual chunk.
 - [ ] **Add a regression check for base-path-relative fetches.** Just fixed
       one hardcoded-absolute-path bug; GitHub Pages project sites are
       especially prone to this class of bug recurring as the codebase grows.
@@ -99,10 +163,12 @@ Per README's own "Deferred" list:
 - [ ] **Behavioral half of the classifier** — cursor path curvature entropy,
       inter-event timing variance, scroll cadence regularity, absence of any
       pointer event before first interaction (SPEC §4a).
-- [ ] **Wire classifier uncertainty (`H_classifier`) into the monument's
-      temporal-instability shader input.** Currently hardcoded to `0` in
-      `main.ts` — the shader input is wired, the number just isn't computed
-      yet. Depends on the item above.
+- [ ] **Wire classifier uncertainty (`H_classifier`) into the temporal
+      instability of the post-processing layer.** The shader input this used to
+      feed went with the stele field; there is currently no instability term in
+      `ui/post.ts` at all, which is the honest state — the number was never
+      computed, and a wired input reading a constant zero was only ever a
+      placeholder. Add the term and the input together. Depends on the item above.
 - [ ] **Procedural sound** (SPEC §6c) — muted-by-default drone seeded from
       the visitor's hash, noise floor scaling with surprisal, the recorded
       audio-fingerprint value used as a literal modulation source.

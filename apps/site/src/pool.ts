@@ -388,8 +388,8 @@ export async function wear(id: string): Promise<{ wearCount: number; counted: bo
 /**
  * The forge's running totals, kept in this browser.
  *
- * These used to be posted to the service, which held a pool-wide total for the
- * monument's inscription. The route that did that is gone: it backed a feature
+ * These used to be posted to the service, which held a pool-wide total for
+ * publication. The route that did that is gone: it backed a feature
  * still deferred under SPEC §2, and a service that exists to hold donated
  * identities should not also be a counter for something the browser computes
  * on its own.
