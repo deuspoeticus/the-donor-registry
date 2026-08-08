@@ -1,0 +1,606 @@
+/*
+ * The instruments.
+ *
+ * Every reading on this page is drawn by one of the shapes below, and each shape
+ * answers one kind of question. A figure is a single number worth a whole paragraph.
+ * A bar row compares quantities of the same kind. A histogram shows a distribution.
+ * A meter shows where one value sits in a range. A matrix shows a relation between
+ * two sets. A step chart shows a quantity over time. A table is the evidence.
+ *
+ * The colour rule from tokens.css is enforced here rather than at the call site:
+ * measured fills are ink, inferred fills are turquoise, and anything marked as
+ * exposure is red. A chart cannot pick its own colour, which is how the palette
+ * stays a notation instead of a preference.
+ *
+ * ---------------------------------------------------------------- the window
+ *
+ * The monospace is the one face on this page that is not carried — it is whatever
+ * the visitor's machine has, and on this site that is deliberate (tokens.css). The
+ * consequence is that it can never be trusted with the page's typography, so it is
+ * never set loose in running text. Every monospace run lives inside a `.window`: a
+ * sunk panel with a hairline frame and a small caps caption band, which is the
+ * instrument's readout screen. Inside the frame, an unpredictable face can only
+ * change the inside of the frame.
+ */
+
+.window {
+  border: 1px solid var(--rule-lit);
+  background: var(--sink);
+}
+
+.window__bar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5em 0.8em;
+  border-bottom: 1px solid var(--rule-lit);
+  background: var(--paper-2);
+  font-family: var(--font-sans);
+  font-size: var(--t-micro);
+  font-weight: 600;
+  font-stretch: 82%;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.window__count {
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums slashed-zero;
+  white-space: nowrap;
+}
+
+.window__body {
+  padding: 0.9em;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-color: var(--rule-lit) transparent;
+}
+
+/* A window whose content is already a full-bleed table needs no inner padding. */
+.window__body--flush {
+  padding: 0;
+}
+
+/* ---------------------------------------------------------------- figures */
+
+.readout {
+  display: grid;
+  gap: clamp(1.25rem, 3.5vw, 2.5rem);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  align-items: start;
+}
+
+.figure__value {
+  display: block;
+  font-size: var(--t-fig);
+  line-height: 0.88;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.figure__value--exposed {
+  color: var(--red-ink);
+}
+
+.figure__value--inferred {
+  color: var(--cyan-ink);
+}
+
+.figure__unit {
+  display: block;
+  margin-top: 0.7em;
+  padding-top: 0.6em;
+  border-top: 1px solid var(--rule);
+  font-family: var(--font-sans);
+  font-size: var(--t-sm);
+  line-height: 1.4;
+  color: var(--ink-3);
+  max-width: 30ch;
+}
+
+/* ---------------------------------------------------------------- bar rows */
+
+.bars {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.bars__row {
+  display: grid;
+  grid-template-columns: minmax(5rem, 9.5rem) 1fr 3.5rem;
+  align-items: center;
+  gap: 0.8rem;
+  transition: color 110ms linear;
+}
+
+.bars__label {
+  font-family: var(--font-sans);
+  font-size: var(--t-micro);
+  font-weight: 600;
+  font-stretch: 82%;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 110ms linear;
+}
+
+.bars__track {
+  position: relative;
+  display: block;
+  height: 1rem;
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+}
+
+.bars__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--ink);
+  opacity: 0.82;
+  transition: opacity 110ms linear;
+}
+
+/* The tick at the head of the bar: the exact value, drawn at full opacity where the
+   fill is not, so a short bar is still readable. */
+.bars__tick {
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--ink);
+}
+
+.bars__value {
+  font-family: var(--font-mono);
+  font-size: var(--t-data);
+  color: var(--ink);
+  text-align: right;
+  font-variant-numeric: tabular-nums slashed-zero;
+}
+
+/* Modelled quantities. Turquoise fill, turquoise tick, turquoise number. */
+.bars--inferred .bars__fill,
+.bars--inferred .bars__tick {
+  background: var(--cyan-ink);
+}
+
+.bars--inferred .bars__value {
+  color: var(--cyan-ink);
+}
+
+.bars--exposed .bars__fill,
+.bars--exposed .bars__tick {
+  background: var(--red);
+}
+
+.bars--exposed .bars__value {
+  color: var(--red-ink);
+}
+
+/* A second, fainter bar on the same track, for the row that carries two quantities —
+   the observed sum against the modelled figure, most of all. */
+.bars__fill--under {
+  background: var(--red);
+  opacity: 0.24;
+}
+
+/* ---------------------------------------------------------------- histogram */
+
+.hist {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  align-items: end;
+  gap: 2px;
+  height: clamp(6rem, 14vw, 9rem);
+  border-bottom: 1px solid var(--ink);
+  padding-bottom: 1px;
+}
+
+.hist__col {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  height: 100%;
+  min-width: 0;
+}
+
+.hist__bar {
+  width: 100%;
+  background: var(--ink);
+  opacity: 0.8;
+  /* Never zero: an empty bin has to be visibly empty rather than absent. */
+  min-height: 1px;
+  transition: opacity 110ms linear, background-color 110ms linear;
+}
+
+.hist--inferred .hist__bar {
+  background: var(--cyan-ink);
+}
+
+.hist--exposed .hist__bar {
+  background: var(--red);
+}
+
+/* The bin the visitor's own reading falls in. Red: it is the identifying fact on an
+   otherwise anonymous distribution. */
+.hist__col--self .hist__bar {
+  background: var(--red);
+  opacity: 1;
+}
+
+.hist__col--self::after {
+  content: '⌖';
+  font-family: var(--font-mark);
+  position: absolute;
+  top: -1.35em;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.8rem;
+  color: var(--red-ink);
+}
+
+.hist__axis {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.5em;
+  font-family: var(--font-sans);
+  font-size: var(--t-micro);
+  font-stretch: 82%;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* ---------------------------------------------------------------- meter */
+
+/*
+ * A segmented gauge. Twenty cells, filled to the value, with the cell the value
+ * lands in drawn solid — a bar chart would say the same thing, but a bar chart
+ * implies a continuum and this is a position in a range with a known floor and a
+ * known ceiling, which is what a row of cells says.
+ */
+.meter {
+  display: flex;
+  gap: 2px;
+  align-items: stretch;
+  height: 0.85rem;
+}
+
+.meter__seg {
+  flex: 1;
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  transition: background-color 110ms linear;
+}
+
+.meter__seg--on {
+  background: var(--ink-4);
+}
+
+.meter__seg--head {
+  background: var(--ink);
+}
+
+.meter--inferred .meter__seg--on {
+  background: var(--cyan);
+}
+
+.meter--inferred .meter__seg--head {
+  background: var(--cyan-ink);
+}
+
+.meter--exposed .meter__seg--on {
+  background: var(--red-lit);
+}
+
+.meter--exposed .meter__seg--head {
+  background: var(--red-ink);
+}
+
+.meter__scale {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.45em;
+  font-family: var(--font-sans);
+  font-size: var(--t-micro);
+  font-stretch: 82%;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* ---------------------------------------------------------------- matrix */
+
+.matrix {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.matrix__cell {
+  stroke: none;
+}
+
+/* The pairs the spanning tree kept. Everything else is a relation the model
+   measured and then discarded, which is the point of drawing the matrix at all. */
+.matrix__kept {
+  fill: none;
+  stroke: var(--red);
+  stroke-width: 1;
+}
+
+.matrix__diag {
+  fill: var(--rule);
+}
+
+.matrix__label {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  letter-spacing: 0.04em;
+  fill: var(--ink-4);
+}
+
+.matrix__frame {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1;
+}
+
+/* ---------------------------------------------------------------- step chart */
+
+.step {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.step__line {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+
+.step__area {
+  fill: var(--ink);
+  opacity: 0.08;
+}
+
+.step__grid {
+  stroke: var(--rule);
+  stroke-width: 1;
+}
+
+.step__tick {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  fill: var(--ink-4);
+}
+
+.step__dot {
+  fill: var(--red);
+}
+
+/* ---------------------------------------------------------------- tree */
+
+.tree {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.tree__edge {
+  stroke: var(--cyan-ink);
+  fill: none;
+  transition: stroke 140ms linear, stroke-opacity 140ms linear;
+}
+
+.tree__node {
+  fill: var(--ink);
+  transition: fill 140ms linear;
+}
+
+.tree__label {
+  font-family: var(--font-sans);
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  fill: var(--ink-3);
+  transition: fill 140ms linear;
+}
+
+.tree__label--root {
+  fill: var(--ink);
+  font-weight: 700;
+}
+
+/* The ring the root sits in, so the centre reads as a centre. */
+.tree__ring {
+  fill: none;
+  stroke: var(--rule);
+  stroke-width: 1;
+  stroke-dasharray: 2 4;
+}
+
+/*
+ * The edges touching the node under the cursor.
+ *
+ * Set by model.ts on pointerenter rather than by a selector, because CSS has no way
+ * to say "the lines that touch the thing being hovered" and forty overlapping edges
+ * are not readable without it.
+ */
+.tree__edge.is-lit {
+  stroke: var(--red);
+  stroke-opacity: 1 !important;
+}
+
+/* ---------------------------------------------------------------- tables */
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: var(--t-data);
+  font-variant-numeric: tabular-nums slashed-zero;
+  background: var(--paper);
+}
+
+.table th {
+  position: sticky;
+  top: 0;
+  text-align: left;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-stretch: 82%;
+  color: var(--ink);
+  text-transform: uppercase;
+  letter-spacing: var(--track-label);
+  font-size: var(--t-micro);
+  padding: 0.7em 1em 0.7em 0.9em;
+  border-bottom: 1px solid var(--ink);
+  background: var(--paper-2);
+  white-space: nowrap;
+}
+
+.table th.num {
+  text-align: right;
+}
+
+.table td {
+  position: relative;
+  padding: 0.45em 1em 0.45em 0.9em;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-2);
+  vertical-align: top;
+}
+
+.table td.value {
+  color: var(--ink-3);
+  word-break: break-all;
+  max-width: 32rem;
+}
+
+.table td.num {
+  text-align: right;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.table td.num--inferred {
+  color: var(--cyan-ink);
+}
+
+.table td.num--exposed {
+  color: var(--red-ink);
+}
+
+/* Zebra, at a value low enough to be felt rather than seen. Forty rows of monospace
+   need a horizontal grain or the eye loses the line. */
+.table tbody tr:nth-child(even) {
+  background: var(--paper-2);
+}
+
+.table tbody tr {
+  transition: background-color 110ms linear, color 110ms linear;
+}
+
+/* The hairline bar under a numeric cell. Same quantity as the number above it, so the
+   column can be read as a shape without reading any of the digits. */
+.bar {
+  display: block;
+  height: 2px;
+  background: var(--ink);
+  opacity: 0.45;
+  margin-top: 0.3em;
+}
+
+.bar--inferred {
+  background: var(--cyan-ink);
+  opacity: 0.7;
+}
+
+/* ---------------------------------------------------------------- keyed rows */
+
+/*
+ * A definition list drawn as a ruled two-column readout: the term in the address
+ * column, the statement in the body column. Used wherever the page has to state a
+ * set of facts that are not quantities. Sunk, and framed, because the values are set
+ * in the monospace.
+ */
+.kv {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  border: 1px solid var(--rule-lit);
+  background: var(--sink);
+}
+
+.kv__row {
+  display: grid;
+  grid-template-columns: minmax(7rem, 13rem) 1fr;
+  gap: 1rem;
+  padding: 0.55em 0.9em;
+  border-bottom: 1px solid var(--rule);
+  align-items: baseline;
+  transition: background-color 110ms linear, color 110ms linear;
+}
+
+.kv__row:last-child {
+  border-bottom: 0;
+}
+
+.kv__key {
+  font-family: var(--font-sans);
+  font-size: var(--t-micro);
+  font-weight: 600;
+  font-stretch: 82%;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  display: flex;
+  align-items: baseline;
+  gap: 0.5em;
+  transition: color 110ms linear;
+}
+
+.kv__value {
+  font-family: var(--font-mono);
+  font-size: var(--t-data);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums slashed-zero;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  transition: color 110ms linear;
+}
+
+.kv__value--fact {
+  color: var(--ink);
+}
+
+.kv__value--inferred {
+  color: var(--cyan-ink);
+}
+
+.kv__value--exposed {
+  color: var(--red-ink);
+}
+
+@media (max-width: 44rem) {
+  .kv__row {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+}

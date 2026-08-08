@@ -1,10 +1,16 @@
-# WEAR ME
+# THE DONOR REGISTRY
+
+## Wear Me.
 
 **A fingerprint commons.**
 
+The full title is **THE DONOR REGISTRY: Wear Me.** — the registry is what the work is
+called, the slogan is what it says to you, and they are a premise and a conclusion
+rather than a title and a subtitle.
+
 Web Residencies No. 22 »Ignore All Previous Instructions« — Akademie Schloss Solitude, curated by !Mediengruppe Bitnik.
 
-Every browser leaks a near-unique signature. This piece measures the visitor's in front of them, runs the same inference ad-tech runs, tells them what it decided, and then does the thing the industry never anticipated: it puts the identity into a public pool that anyone can wear. The monument is a graveyard of donated faces, some real, some manufactured by the piece itself, some belonging to machines, and it hands out working tooling to inhabit any of them.
+Every browser leaks a near-unique signature. This piece measures the visitor's in front of them, runs the same inference ad-tech runs, tells them what it decided, and then does the thing the industry never anticipated: it puts the identity into a public pool that anyone can wear. The catalogue is a register of donated faces, some real, some manufactured by the piece itself, some belonging to machines, and it hands out working tooling to inhabit any of them.
 
 The registry is indifferent to what kind of thing you are. The collector runs on anything that executes JavaScript, so browsing agents are measured like everyone else and their signatures enter the same commons, unlabeled. The personhood boundary is not argued with; it is dissolved by the artwork's own procedure.
 
@@ -53,7 +59,12 @@ Then open http://localhost:5173. The site falls back to the committed launch fil
 ```
 packages/core      isomorphic: attribute manifest, canonical hashing, entropy,
                    Chow-Liu tree, forge + impossibility manifest, userscript emitter
-apps/site          Vite + TypeScript + Three.js — the monument and the interface
+apps/site          Vite + TypeScript, no runtime dependencies — the instrument
+                   src/styles/   nine files: tokens, base, cursor, chrome, board,
+                                 data, controls, post, motion
+                   src/fonts/    the three self-hosted faces
+                   src/ui/       sector manifest, notation, chart primitives,
+                                 census, consent, readouts, model, catalogue, post
 apps/api           Fastify + better-sqlite3 + Zod — the pool
 data/bootstrap.json  the seeded launch pool, generated offline, committed
 ```
@@ -92,7 +103,13 @@ Stored: the attribute vector, its derived id, a created-at date bucketed to the 
 
 Never stored: IP address, User-Agent header, any request-level identifier, any cookie. There is no column for them, which is a stronger guarantee than a policy about them. Rate limiting hashes the caller's address under a salt that is regenerated and thrown away every ten minutes, so the buckets become unlinkable to any address — including to themselves a minute earlier.
 
-The page makes no third-party requests, including for its lettering. A piece about surfaces that report on you without asking does not get to open a connection to a font CDN.
+The page makes no third-party requests, including for its lettering. A piece about surfaces that report on you without asking does not get to open a connection to a font CDN. The three faces — Jacquard 24 for display, Archivo for everything readable, Noto Sans Symbols 2 subsetted to a closed notation of 71 marks — are pulled once by `apps/site/scripts/fetch-fonts.mjs` and committed. The monospace is deliberately *not* carried: it resolves to whatever terminal face your machine has, which on a site about machines that give themselves away by their font metrics is the honest place to leave that decision — and because it is unknowable, every run of it sits inside a framed window rather than loose in the text.
+
+The ground is paper: off-white, with ink on it, two accents that each mean exactly one thing (red is exposure, turquoise is inference), and inversion reserved for a single meaning — wearing.
+
+The page names things in two registers, and the division is load-bearing (SPEC §6e-iii). **Marks** are nineteen typographic characters for operations and relations — a sum, a mutual information, an independence assumption, a truth value. **Sigils** are twenty downsampled emoji for *things* — Twemoji (CC-BY 4.0) taken at 72 pixels and destroyed down to 16, desaturated to four bands of ink, with one hue kept where the hue is the meaning. If it has a plural it is a sigil; if it takes arguments it is a mark. The set is alchemy, sorcery, blood and animals: the serpent is the loop that eats itself, the scrying orb is the classifier, the alembic is extraction, the candle is whether the service answers.
+
+The cursors are three of the same sprites — a dagger, a manicule and an hourglass — because the pointing hand every operating system draws over a link is a twelfth-century manuscript convention that nobody remembers is one.
 
 A browser fingerprint is almost certainly personal data under the GDPR. The basis here is explicit informed consent, freely given, with a plain revocation path. The same collection is performed at planetary scale under a legitimate-interest claim by companies that never show anyone the payload. That asymmetry is the concept text.
 
@@ -100,8 +117,14 @@ A browser fingerprint is almost certainly personal data under the GDPR. The basi
 
 ## State
 
-Built: collector (14 probes), entropy with the observed/modelled gap, Chow-Liu forge with the impossibility manifest, the dependency-tree view, the monument (instanced field plus exact close-up, glitch mapping wired to surprisal, dominant attribute, wear and forge plausibility), all three consent tiers with the real payload preview, the userscript emitter, and the pool service with donation, wearing, revocation and the consequence log.
+Built: collector (14 probes), entropy with the observed/modelled gap, Chow-Liu forge with the impossibility manifest, the pool census, the dependency tree and the full mutual-information matrix beside it, all three consent tiers with the real payload preview, the userscript emitter, and the pool service with donation, wearing, revocation and the consequence log. One page, eleven fixed sector addresses, every jump a scroll.
 
-Deferred: the behavioural half of the classifier and the uncertainty-driven temporal instability it feeds (the shader input is wired and reads zero rather than a fabricated number), procedural sound, the report-back loop, and font-metric interception in the userscript.
+The two acts that are not readings — a signature **given**, a face **taken** — are set apart as *rites* (SPEC §6h): boxed, sealed, with the consequence on its own line and the action alone at the foot. Ceremony by weight, never by extra steps; the consent gate stays exactly as symmetrical as §6f requires.
+
+The glitch mapping (`SPEC.md` §6b) is wired to the page's own post-processing layer: total surprisal sets how far it degrades, the dominant attribute sets in what way, and a switch in the status strip turns the rendering off without changing a number.
+
+**No background artwork, deliberately.** The Three.js field of steles that used to sit under the whole document has been removed and nothing has replaced it yet; §6a records why, and what was kept. The site consequently has no runtime dependencies and ships around 125 kB.
+
+Deferred: the artwork, the behavioural half of the classifier and the temporal instability it would feed, procedural sound, the report-back loop, and font-metric interception in the userscript.
 
 `SPEC.md` is the full build specification and records the decisions this implementation departs from.

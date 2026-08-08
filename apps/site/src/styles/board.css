@@ -1,0 +1,573 @@
+/*
+ * The board: how a sector is drawn, and how the page is divided.
+ *
+ * Every sector is the same object — a double rule, an address, a mark, a name, and a
+ * body indented to the address column. Nothing is a special case, including the
+ * masthead and the consent gate, because a page whose sections are each shaped
+ * differently has a layout rather than a structure.
+ *
+ * The one exception is a **rite**, and it is an exception on purpose. See below.
+ *
+ * The address column is a real column. On wide screens the sector body starts at
+ * `--rail` and carries a hairline down its left edge, so the whole scroll shares one
+ * continuous vertical rule and reads as a ruled sheet rather than a stack of cards.
+ */
+
+.sector {
+  border-top: 1px solid var(--rule);
+  padding: clamp(1.75rem, 4.5vw, 3.5rem) var(--gutter) clamp(2.25rem, 5.5vw, 4.5rem);
+  /*
+   * Where an anchor parks, declared here and *only* here. `scroll-padding-top` on
+   * the scroll container was also set once, and the two compose rather than one
+   * winning — the browser puts the element's margin box at the padding edge, so
+   * every jump landed a full head-height too low. This is the one that stays,
+   * because the scroll-spy in ui/head.ts reads it off the element to decide where
+   * the reading line is, and a spy measuring against a different number from the one
+   * the jump uses lags a sector behind every click.
+   */
+  scroll-margin-top: calc(var(--head-h) + 1rem);
+}
+
+.sector:first-child {
+  border-top: 0;
+}
+
+.sector__inner {
+  max-width: var(--frame);
+  margin: 0 auto;
+}
+
+/* ---------------------------------------------------------------- the head */
+
+/*
+ * A double rule above the address and a hairline below it. The double rule is the
+ * registry's punctuation for "a different kind of thing starts here"; hairlines
+ * separate two things of the same kind.
+ */
+.sector__head {
+  display: grid;
+  grid-template-columns: var(--rail) 1.75rem 1fr auto;
+  align-items: baseline;
+  gap: 0 0.5rem;
+  padding: 0.7rem 0 0.6rem;
+  border-top: 3px double var(--ink);
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: clamp(1.5rem, 3.5vw, 2.75rem);
+}
+
+.sector__address {
+  font-family: var(--font-mono);
+  font-size: var(--t-label);
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums slashed-zero;
+}
+
+.sector__sigil {
+  color: var(--ink-2);
+  transition: color 150ms linear, transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.sector__name {
+  font-family: var(--font-sans);
+  font-size: var(--t-label);
+  font-weight: 700;
+  font-stretch: 82%;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--ink);
+  line-height: 1.4;
+}
+
+/* A right-aligned reading in the head, for sectors that have one number worth
+   stating before anything else in them is read. */
+.sector__meta {
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums slashed-zero;
+  justify-self: end;
+  white-space: nowrap;
+}
+
+@media (max-width: 44rem) {
+  .sector__head {
+    grid-template-columns: 2.5rem 1.5rem 1fr;
+  }
+
+  .sector__meta {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------- the body */
+
+.sector__body {
+  padding-left: 0;
+}
+
+@media (min-width: 60rem) {
+  .sector__body {
+    padding-left: calc(var(--rail) - 1px);
+    border-left: 1px solid var(--rule);
+    margin-left: 1px;
+  }
+}
+
+/*
+ * The hierarchy inside a sector, largest to smallest, and each step is a different
+ * *kind* of statement rather than the same statement at a different size:
+ *
+ *   .sector__title   what this sector is. Bitmap serif, display scale.
+ *   .sector__lede    why it is here. Grotesque, one size down, one sentence.
+ *   body             the argument. Reading size, measured.
+ *   .label           what a block of readings is. Small caps, condensed.
+ *   .gloss           the limits of the reading. Small, light.
+ */
+.sector__title {
+  font-size: var(--t-hero);
+  margin-bottom: 0.3em;
+  line-height: 0.96;
+}
+
+.sector__lede {
+  font-family: var(--font-sans);
+  font-size: var(--t-lg);
+  font-weight: 400;
+  line-height: 1.25;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  max-width: 34ch;
+  text-wrap: balance;
+}
+
+/* ---------------------------------------------------------------- bulletins
+ *
+ * Unnumbered, unaddressed, and interruptive: a fact about right now that the page
+ * has to state before the reader reaches any figure it invalidates.
+ */
+.bulletin {
+  border-top: 1px solid var(--rule);
+  padding: clamp(1.25rem, 3vw, 2rem) var(--gutter);
+  background: var(--sink);
+}
+
+.bulletin__inner {
+  max-width: var(--frame);
+  margin: 0 auto;
+  border-left: 3px solid var(--red);
+  padding-left: clamp(1rem, 2vw, 1.5rem);
+}
+
+.bulletin--inferred .bulletin__inner {
+  border-left-color: var(--cyan-ink);
+}
+
+/* ---------------------------------------------------------------- the masthead */
+
+/*
+ * THE DONOR REGISTRY, and Wear Me under it.
+ *
+ * Two names doing two jobs. The first is what the institution is called and it is
+ * set as an institution sets its name: full width, bitmap serif, upper case. The
+ * second is what the institution actually says to you, and it is set as an
+ * instruction, in red, because it is one.
+ */
+.masthead__title {
+  font-size: var(--t-mega);
+  line-height: 0.84;
+  margin-bottom: 0.1em;
+}
+
+.masthead__slogan {
+  display: block;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 6.5vw, 5rem);
+  line-height: 0.9;
+  letter-spacing: 0;
+  color: var(--red-ink);
+  -webkit-font-smoothing: none;
+  margin-bottom: 0.35em;
+}
+
+.runhead {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6em;
+  flex-wrap: wrap;
+  font-family: var(--font-sans);
+  font-size: var(--t-label);
+  font-weight: 600;
+  font-stretch: 82%;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--rule);
+  max-width: none;
+}
+
+/*
+ * The proposition: the shortest true statement of the piece, and the only element on
+ * the page whose chromatic split is not driven by a measurement — because this
+ * sentence is what the measurement is about.
+ */
+.proposition {
+  font-size: var(--t-hero);
+  line-height: 1.04;
+  color: var(--ink);
+  max-width: 26ch;
+  text-wrap: balance;
+  margin-bottom: 1.25rem;
+}
+
+/* ---------------------------------------------------------------- tiles
+ *
+ * The figure grid. Hairline gaps over the rule colour rather than borders per tile,
+ * so the whole block reads as one ruled surface.
+ */
+.tiles {
+  display: grid;
+  gap: 1px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.5rem), 1fr));
+  background: var(--rule);
+  border: 1px solid var(--rule-lit);
+}
+
+.tile {
+  position: relative;
+  background: var(--paper);
+  padding: clamp(0.9rem, 2vw, 1.4rem);
+  transition: background-color 140ms linear, color 140ms linear;
+}
+
+.tile__value {
+  display: block;
+  font-size: var(--t-fig-sm);
+  line-height: 1;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  transition: color 140ms linear;
+}
+
+.tile__value--exposed {
+  color: var(--red-ink);
+}
+
+.tile__value--inferred {
+  color: var(--cyan-ink);
+}
+
+.tile__label {
+  display: block;
+  margin-top: 0.7em;
+  padding-top: 0.55em;
+  border-top: 1px solid var(--rule);
+  font-family: var(--font-sans);
+  font-size: var(--t-micro);
+  font-weight: 600;
+  font-stretch: 82%;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  transition: color 140ms linear, border-color 140ms linear;
+}
+
+/*
+ * The definition, which is what the tile is actually claiming.
+ *
+ * In the document at all times, and *legible* at all times: it sits under the label
+ * rather than on top of the figure. It used to be an absolutely-positioned overlay
+ * that faded in while the figure blurred out, which meant that at the moment you
+ * were reading the claim you could no longer read the number it was about.
+ */
+.tile__def {
+  display: block;
+  margin-top: 0.6em;
+  font-family: var(--font-sans);
+  font-size: var(--t-micro);
+  line-height: 1.5;
+  letter-spacing: 0;
+  color: var(--ink-3);
+  transition: color 140ms linear;
+}
+
+/* ---------------------------------------------------------------- the loop */
+
+.loop {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  background: var(--rule);
+  border: 1px solid var(--rule-lit);
+}
+
+.loop__step {
+  position: relative;
+  background: var(--paper);
+  padding: clamp(1.1rem, 2.4vw, 1.6rem);
+  transition: background-color 150ms linear, color 150ms linear;
+}
+
+.loop__num {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  color: var(--ink-2);
+  margin-bottom: 0.7em;
+  transition: color 150ms linear;
+}
+
+/*
+ * The step number, as a circled ordinal. It reads as a mark but it carries the order
+ * of the loop, which is information, so it takes the text value rather than the
+ * graphics one.
+ */
+.loop__code {
+  font-family: var(--font-mark);
+  font-size: var(--t-sm);
+  letter-spacing: 0;
+  color: var(--ink-3);
+}
+
+.loop__name {
+  font-family: var(--font-display);
+  font-size: 1.9rem;
+  letter-spacing: 0;
+  color: var(--ink);
+  margin: 0 0 0.3em;
+  -webkit-font-smoothing: none;
+  transition: color 150ms linear;
+}
+
+.loop__body {
+  font-size: var(--t-sm);
+  line-height: 1.5;
+  color: var(--ink-2);
+  max-width: none;
+  transition: color 150ms linear;
+}
+
+/* What the step does to your data, stated on the step itself. */
+.loop__cost {
+  display: block;
+  margin-top: 0.9em;
+  padding-top: 0.7em;
+  border-top: 1px solid var(--rule);
+  font-family: var(--font-sans);
+  font-size: var(--t-micro);
+  font-weight: 600;
+  font-stretch: 82%;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--red-ink);
+  transition: color 150ms linear, border-color 150ms linear;
+}
+
+/* ---------------------------------------------------------------- the rites
+ *
+ * Two things happen on this page that are not readings. A signature is **given**,
+ * and a face is **taken**. Neither can be undone by looking at it again, and until
+ * now both were a button in a paragraph.
+ *
+ * A rite is the only element on the board that is boxed, and that is the point: it
+ * is lifted out of the ruled sheet the way a deed is lifted out of a ledger. Heavy
+ * frame, a seal in the corner, a title in the bitmap serif, the consequence stated
+ * in full, and the action alone at the bottom with nothing else competing for the
+ * click.
+ *
+ * What a rite must never be is *friction*. Ceremony is a matter of weight and not of
+ * steps: no rite below adds a click, and in the one place where two choices are
+ * offered they stay identical in size, position and styling (§6f).
+ */
+.rite {
+  position: relative;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  padding: clamp(1.25rem, 3vw, 2.25rem);
+  /* The inner keyline. One rule inside another is what a certificate does. */
+  box-shadow: inset 0 0 0 1px var(--paper), inset 0 0 0 3px var(--rule);
+  max-width: 62rem;
+}
+
+.rite--given {
+  border-color: var(--red);
+}
+
+.rite--taken {
+  border-color: var(--ink);
+}
+
+.rite__head {
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+  padding-bottom: 0.8rem;
+  margin-bottom: 1.1rem;
+  border-bottom: 3px double var(--rule-lit);
+}
+
+.rite__seal {
+  color: var(--red-ink);
+  flex: none;
+  transition: transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.rite--taken .rite__seal {
+  color: var(--ink);
+}
+
+/* The manicule on the consequence line, pointing at the sentence that matters. */
+.rite__point {
+  color: var(--red-ink);
+  flex: none;
+  align-self: flex-start;
+  margin-top: 0.05em;
+}
+
+.rite--taken .rite__point {
+  color: var(--ink);
+}
+
+.rite__kicker {
+  font-family: var(--font-sans);
+  font-size: var(--t-label);
+  font-weight: 700;
+  font-stretch: 82%;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.rite__title {
+  display: block;
+  font-size: clamp(1.6rem, 4vw, 2.6rem);
+  line-height: 1;
+  color: var(--ink);
+  margin-bottom: 0.5rem;
+}
+
+.rite__body {
+  font-size: var(--t-md);
+  line-height: 1.5;
+  color: var(--ink-2);
+  max-width: 54ch;
+}
+
+/*
+ * The consequence. Every rite states what it does in one line, in red, set apart
+ * from the prose above it — the sentence somebody who reads nothing else will read.
+ */
+.rite__consequence {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6em;
+  margin: 1.1rem 0;
+  padding: 0.7rem 0.9rem;
+  border-left: 3px solid var(--red);
+  background: var(--sink);
+  font-family: var(--font-sans);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  letter-spacing: var(--track-body);
+  color: var(--ink);
+}
+
+.rite--taken .rite__consequence {
+  border-left-color: var(--ink);
+}
+
+.rite__action {
+  margin-top: 1.25rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--rule);
+}
+
+/* ---------------------------------------------------------------- notices */
+
+.notice {
+  font-size: var(--t-sm);
+  color: var(--ink);
+  border: 1px solid var(--red);
+  border-left-width: 3px;
+  padding: 0.9em 1.1em;
+  max-width: var(--measure);
+  background: var(--sink);
+}
+
+/*
+ * The pool-bound caveat, at the same weight as the number it qualifies. It is not
+ * fine print and it does not get to look like fine print: a figure measured against
+ * two hundred entries cannot mean what a figure measured against the web would mean,
+ * and the page has to say so at full size.
+ */
+.caveat {
+  font-size: var(--t-md);
+  line-height: 1.5;
+  color: var(--ink-2);
+  border-left: 3px solid var(--rule-lit);
+  padding-left: 1em;
+  max-width: 48ch;
+}
+
+/* ---------------------------------------------------------------- disclosure */
+
+.details {
+  border-top: 1px solid var(--rule-lit);
+  border-bottom: 1px solid var(--rule-lit);
+}
+
+.details__summary {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  font-family: var(--font-sans);
+  font-size: var(--t-label);
+  font-weight: 600;
+  font-stretch: 82%;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding: 0.9em 0;
+  list-style: none;
+  transition: color 120ms linear;
+}
+
+.details__summary::-webkit-details-marker {
+  display: none;
+}
+
+.details__summary::before {
+  content: '▸';
+  font-family: var(--font-mark);
+  color: var(--ink-4);
+  transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), color 120ms linear;
+}
+
+.details__summary:hover {
+  color: var(--ink);
+}
+
+.details__summary:hover::before {
+  color: var(--red-ink);
+}
+
+.details[open] > .details__summary {
+  color: var(--ink);
+  border-bottom: 1px solid var(--rule);
+}
+
+.details[open] > .details__summary::before {
+  transform: rotate(90deg);
+  color: var(--red-ink);
+}
+
+.details__body {
+  padding: 1.4rem 0;
+}

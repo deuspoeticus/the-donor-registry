@@ -1,0 +1,432 @@
+/*
+ * Post-processing (§6b).
+ *
+ * The corruption used to be a shader on a field of steles. The steles are gone, and
+ * the mapping is not: it has moved onto the page itself, which is now the surface
+ * that degrades. Every rule below is a readout, and the table it implements is the
+ * same one the shader implemented.
+ *
+ *   total surprisal          --glitch, 0..1. Corruption *magnitude*. A visitor
+ *                            typical of the pool leaves the page nearly clean; a
+ *                            strange one damages it. Illegibility reads as exposure.
+ *
+ *   dominant attribute       data-channel. Corruption *character*, and this is the
+ *                            part that must not be improvised:
+ *                              canvas    channel separation — red and turquoise
+ *                                        pulled apart across the lettering
+ *                              webgl     displacement — the scan band shears
+ *                                        sideways as it passes
+ *                              audio     vertical banding, at a period taken from
+ *                                        the recorded compressor sum
+ *                              fonts     raster debris — a second, finer screen
+ *                                        laid across the first
+ *                              timezone  hue rotated by the UTC offset
+ *                              none      no distinct character
+ *
+ *   wear count               handled per entry in the catalogue, not here.
+ *
+ * ---------------------------------------------------------------- on paper
+ *
+ * The ground is now off-white, and that changes what every one of these effects *is*
+ * without changing what any of them means. On a black screen this layer was a
+ * damaged video signal. On paper it is a damaged document: the grain is foxing, the
+ * raster is a halftone screen, the band is a photocopier flash travelling down the
+ * platen, the dropout is a smear of ink, and the glow is ink bleeding into the fibre
+ * rather than phosphor blooming off it. Same mapping, older machine — which is the
+ * register the whole piece is in.
+ *
+ * Two things it is not. It is not decoration: with nothing measured, --glitch is zero
+ * and the channel is `none`, and what is left is a grain and a screen at resting
+ * strength, which is the instrument idling rather than a mood. And it is not
+ * mandatory: the status strip carries a switch, because a visitor who cannot read the
+ * page cannot read the argument either, and the argument is the point.
+ *
+ * Reduced motion freezes the temporal terms and leaves the corruption standing. A
+ * visitor who has asked for less movement is not thereby entitled to a flattering
+ * picture of how identifiable they are.
+ */
+
+:root {
+  /* Written by ui/post.ts. Defaults are the resting state. */
+  --split: 0em;
+  --glow: 0.05em;
+  --raster: 3px;
+  --band-period: 5px;
+  --grain-opacity: 0.5;
+  --scan-opacity: 0.22;
+}
+
+.post {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+  overflow: hidden;
+  /*
+   * Deliberately *not* isolated, and this is not an oversight.
+   *
+   * `isolation: isolate` was here, on the reasonable-sounding grounds that the layer
+   * should not be able to reach the document underneath. It establishes a Backdrop
+   * Root, which is exactly what the two layers that matter need to reach through:
+   * `.post__band` and `.post__flash` are `backdrop-filter`, and a backdrop root at
+   * this element means they sample the inside of this element — which is transparent
+   * — so the band reads as a plain highlight and the inversion does nothing at all.
+   *
+   * Nothing here uses mix-blend-mode, so there is nothing to isolate. The layers
+   * composite against the page through their own alpha, which keeps the palette out
+   * of the effect's reach by construction rather than by a property.
+   */
+}
+
+.post[data-signal='off'] {
+  display: none;
+}
+
+/* ---------------------------------------------------------------- grain */
+
+/*
+ * Foxing. Fractal noise generated in the document rather than fetched, colour-matrixed
+ * down to black speckle with varying alpha so that it *darkens* paper instead of
+ * lightening it — the same filter over a white ground with its default output would
+ * be a grey haze, which is fog rather than fibre.
+ *
+ * One tile, repeated, stepped four ways per second. A smooth drift reads as fog and a
+ * per-frame reseed reads as television; four steps reads as a mechanism.
+ */
+.post__grain {
+  position: absolute;
+  inset: -50%;
+  width: 200%;
+  height: 200%;
+  opacity: calc(var(--grain-opacity) * (0.25 + var(--glitch) * 0.75));
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.55 0.55 0.55 0 -0.42'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  animation: grain 0.45s steps(1) infinite;
+}
+
+@keyframes grain {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  25% {
+    transform: translate3d(-3%, 2%, 0);
+  }
+  50% {
+    transform: translate3d(2%, -3%, 0);
+  }
+  75% {
+    transform: translate3d(-2%, -2%, 0);
+  }
+}
+
+/* ---------------------------------------------------------------- the screen */
+
+.post__scan {
+  position: absolute;
+  inset: 0;
+  opacity: calc(var(--scan-opacity) * (0.45 + var(--glitch) * 0.55));
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0,
+    rgba(0, 0, 0, 0) calc(var(--raster) - 1px),
+    rgba(0, 0, 0, 0.55) calc(var(--raster) - 1px),
+    rgba(0, 0, 0, 0.55) var(--raster)
+  );
+  animation: interlace 6s ease-in-out infinite;
+}
+
+/* The mains hum. Very slight, very slow; it is the thing that makes a still surface
+   feel like it is being produced rather than printed. */
+@keyframes interlace {
+  0%,
+  100% {
+    opacity: calc(var(--scan-opacity) * (0.45 + var(--glitch) * 0.55));
+  }
+  50% {
+    opacity: calc(var(--scan-opacity) * (0.58 + var(--glitch) * 0.55));
+  }
+}
+
+/* audio: the screen turns ninety degrees and takes its period from the recorded
+   compressor sum. The fingerprint is literally what you are looking through. */
+.post[data-channel='audio'] .post__scan {
+  background-image: repeating-linear-gradient(
+      to right,
+      rgba(0, 0, 0, 0) 0,
+      rgba(0, 0, 0, 0) calc(var(--band-period) - 1px),
+      rgba(0, 0, 0, 0.45) calc(var(--band-period) - 1px),
+      rgba(0, 0, 0, 0.45) var(--band-period)
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0) 0,
+      rgba(0, 0, 0, 0) calc(var(--raster) - 1px),
+      rgba(0, 0, 0, 0.25) calc(var(--raster) - 1px),
+      rgba(0, 0, 0, 0.25) var(--raster)
+    );
+}
+
+/* fonts: a second, finer screen across the first — glyph-like debris. */
+.post[data-channel='fonts'] .post__scan {
+  background-image: repeating-linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0) 0,
+      rgba(0, 0, 0, 0) 1px,
+      rgba(0, 0, 0, 0.5) 1px,
+      rgba(0, 0, 0, 0.5) 2px
+    ),
+    repeating-linear-gradient(
+      to right,
+      rgba(0, 0, 0, 0) 0,
+      rgba(0, 0, 0, 0) 3px,
+      rgba(0, 0, 0, 0.12) 3px,
+      rgba(0, 0, 0, 0.12) 4px
+    );
+}
+
+/* ---------------------------------------------------------------- the platen */
+
+/*
+ * A photocopier flash, passing down the frame every eleven seconds and resting for
+ * half of that. It is the only layer that reads what is behind it, and it is kept to
+ * a few per cent of the viewport for exactly that reason.
+ */
+.post__band {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 6vh;
+  opacity: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.55) 40%,
+    rgba(255, 255, 255, 0.18) 68%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  backdrop-filter: blur(0.6px) brightness(1.06) saturate(0.85) hue-rotate(var(--channel-hue));
+  animation: track 11s linear infinite;
+}
+
+@keyframes track {
+  0% {
+    transform: translate3d(0, -8vh, 0);
+    opacity: 0;
+  }
+  5% {
+    opacity: calc(0.3 + var(--glitch) * 0.7);
+  }
+  44% {
+    opacity: calc(0.3 + var(--glitch) * 0.7);
+  }
+  50% {
+    transform: translate3d(0, 104vh, 0);
+    opacity: 0;
+  }
+  100% {
+    transform: translate3d(0, 104vh, 0);
+    opacity: 0;
+  }
+}
+
+/* webgl: the band shears sideways as it travels. Geometry displacement, which is what
+   that channel meant on the stele. */
+.post[data-channel='webgl'] .post__band {
+  animation-name: track-shear;
+}
+
+@keyframes track-shear {
+  0% {
+    transform: translate3d(0, -8vh, 0) skewX(0deg);
+    opacity: 0;
+  }
+  5% {
+    opacity: calc(0.3 + var(--glitch) * 0.7);
+  }
+  22% {
+    transform: translate3d(calc(var(--glitch) * 2.5vw), 40vh, 0) skewX(calc(var(--glitch) * -2deg));
+  }
+  36% {
+    transform: translate3d(calc(var(--glitch) * -2.5vw), 70vh, 0) skewX(calc(var(--glitch) * 2deg));
+  }
+  44% {
+    opacity: calc(0.3 + var(--glitch) * 0.7);
+  }
+  50% {
+    transform: translate3d(0, 104vh, 0) skewX(0deg);
+    opacity: 0;
+  }
+  100% {
+    transform: translate3d(0, 104vh, 0) skewX(0deg);
+    opacity: 0;
+  }
+}
+
+/* ---------------------------------------------------------------- the smear */
+
+/*
+ * A slipped roller: one thin line of ink, in a different place each time, on a cycle
+ * that does not divide into the band's. Suppressed entirely at zero magnitude — an
+ * unmeasured page has nothing to smear.
+ */
+.post__dropout {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  top: 18%;
+  opacity: 0;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(11, 11, 13, 0.5) 18%,
+    rgba(0, 114, 101, 0.45) 44%,
+    rgba(207, 26, 6, 0.5) 56%,
+    rgba(11, 11, 13, 0.4) 82%,
+    transparent
+  );
+  animation: dropout 7.3s steps(1, end) infinite;
+}
+
+@keyframes dropout {
+  0%,
+  11% {
+    opacity: 0;
+  }
+  12% {
+    top: 27%;
+    opacity: calc(var(--glitch) * 0.9);
+  }
+  14% {
+    opacity: 0;
+  }
+  47% {
+    top: 63%;
+    opacity: calc(var(--glitch) * 0.7);
+  }
+  48%,
+  79% {
+    opacity: 0;
+  }
+  80% {
+    top: 41%;
+    height: 1px;
+    opacity: calc(var(--glitch) * 0.85);
+  }
+  82%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ---------------------------------------------------------------- the edge */
+
+/*
+ * The shadow a sheet casts into a scanner, and the darkening a photocopy picks up at
+ * its margins. Hue-rotated on the timezone channel, so the *corruption* takes the
+ * visitor's offset without the palette moving with it.
+ */
+.post__vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(130% 100% at 50% 42%, rgba(70, 62, 40, 0) 46%, rgba(70, 62, 40, 0.22) 100%),
+    linear-gradient(to bottom, rgba(70, 62, 40, 0.1), rgba(70, 62, 40, 0) 10%);
+  filter: hue-rotate(var(--channel-hue));
+}
+
+/* ---------------------------------------------------------------- inversion
+ *
+ * Inversion means wearing (tokens.css), and a change of state is that same event seen
+ * from the instrument's side: the moment the page becomes a page about somebody else.
+ * So it is spent on exactly two things — a state changing, and a surface presenting a
+ * borrowed face — and never on emphasis.
+ *
+ * This is the *only* place `invert()` is used. Everywhere else, inversion is done by
+ * swapping declared colours, because inverting red yields turquoise and a notation
+ * that inverted with its surface would turn every warning into an inference. Here it
+ * is a 260 ms flash of the whole frame, which is the one context where that is the
+ * point.
+ *
+ * `data-partial` clips it. Wearing an identity inverts half the frame, because
+ * wearing an identity is what half of you becomes.
+ */
+.post__flash {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  backdrop-filter: invert(1);
+}
+
+.post__flash.is-flashing {
+  animation: flash 260ms cubic-bezier(0.3, 0, 0.2, 1) 1;
+}
+
+.post__flash.is-flashing[data-partial='true'] {
+  clip-path: inset(0 0 50% 0);
+  animation-duration: 380ms;
+}
+
+@keyframes flash {
+  0% {
+    opacity: 0;
+  }
+  22% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ---------------------------------------------------------------- lettering
+ *
+ * Ink bleed, and the chromatic split.
+ *
+ * Applied to the bitmap face alone: it is the one that reads as a mechanism rather
+ * than as text, and splitting body copy into red and turquoise would make the argument
+ * unreadable in order to illustrate the argument.
+ *
+ * Driven entirely by the custom properties, with no selector reaching across the
+ * document for the switch: with the signal off, post.ts sets --signal, --glow and
+ * --split to zero and this declaration collapses to nothing on its own.
+ */
+h1,
+.figure__value,
+.tile__value,
+.proposition,
+.sector__title,
+.masthead__title,
+.masthead__slogan,
+.rite__title,
+.tier__name,
+.loop__name,
+.boot__line {
+  text-shadow: 0 0 var(--glow) rgba(11, 11, 13, calc(0.35 * var(--signal))),
+    var(--split) 0 rgba(255, 42, 23, calc(0.5 * var(--signal))),
+    calc(var(--split) * -1) 0 rgba(0, 114, 101, calc(0.45 * var(--signal)));
+}
+
+/* ---------------------------------------------------------------- restraint */
+
+@media (prefers-reduced-motion: reduce) {
+  .post__grain,
+  .post__scan,
+  .post__band,
+  .post__dropout {
+    animation: none;
+  }
+
+  /* The band and the smear are events in time and nothing else; frozen they are a
+     stripe across the middle of the page, so they go. The grain, the screen, the edge
+     and the split are the corruption itself and they stay. */
+  .post__band,
+  .post__dropout {
+    display: none;
+  }
+
+  .post__flash.is-flashing {
+    animation: none;
+  }
+}

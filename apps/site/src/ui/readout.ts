@@ -1,46 +1,37 @@
 /**
- * The measurement, as shown to the visitor (§3).
+ * The measurement (sector 04) and the inference (sector 05).
  *
  * Two figures, both at full size, with the gap between them named. The
- * pool-bound caveat is set at the same weight as the headline number rather
- * than beneath it in small type, because the caveat is what makes the number
- * true.
+ * pool-bound caveat is set at the same weight as the headline number rather than
+ * beneath it in small type, because the caveat is what makes the number true.
+ *
+ * The sector opens on shape and closes on detail. Before this it opened on forty
+ * rows of monospace, which is the evidence and not the finding; the table is now
+ * the last thing in the sector, behind a disclosure, and everything above it is a
+ * reading somebody can actually take away.
  */
 
 import { attrDef, attrLabel, displayValue, glitchChannel } from '@wearme/core/attributes';
 import type { EntropyReport } from '@wearme/core/types';
 
-import { GAP_EXPLANATION, NEAR_UNIQUE_NOTE, POOL_BOUND_CAVEAT } from '../copy.js';
-import { append, bits, clear, h, int } from './dom.js';
-import type { SectionCounter } from './section.js';
-
-const CHANNEL_DESCRIPTION: Record<string, string> = {
-  canvas: 'channel separation and subpixel tearing',
-  webgl: 'geometry displacement and torn normals',
-  audio: 'vertical banding at the recorded frequency',
-  fonts: 'glyph-like scanline debris',
-  timezone: 'hue rotated by the UTC offset',
-  none: 'no distinct character',
-};
-
-function figure(value: string, unit: string): HTMLElement {
-  return h(
-    'div',
-    {},
-    h('span', { class: 'figure__value', text: value }),
-    h('span', { class: 'figure__unit', text: unit }),
-  );
-}
+import { automationStatement, type AutomationEstimate } from '../classifier.js';
+import {
+  CHANNEL_EFFECT,
+  CHANNEL_NOTE,
+  GAP_EXPLANATION,
+  NEAR_UNIQUE_NOTE,
+  NO_GATE_NOTE,
+  POOL_BOUND_CAVEAT,
+} from '../copy.js';
+import type { Board } from './board.js';
+import { barRows, figure, keyed, meter, windowed, type BarRow } from './chart.js';
+import { append, bits, h, int, pct, prob } from './dom.js';
 
 /**
- * Bits per attribute group, as deck page 3 draws it: a full-width track, a
- * filled bar, a tick at the value, and the number right-aligned in a column of
- * its own. It replaces nothing — the per-attribute table still follows — but it
- * is the summary the table never gave, so the section now reads shape first and
- * detail second instead of opening on forty rows of monospace.
- *
- * Groups are summed from the same per-attribute surprisals the table lists, so
- * the two cannot disagree.
+ * Bits per attribute group, as the deck draws it: a full-width track, a filled
+ * bar, a tick at the value, and the number right-aligned in a column of its own.
+ * Groups are summed from the same per-attribute surprisals the table lists, so the
+ * two cannot disagree.
  */
 function groupChart(report: EntropyReport): HTMLElement {
   const totals = new Map<string, number>();
@@ -50,40 +41,23 @@ function groupChart(report: EntropyReport): HTMLElement {
     totals.set(group, (totals.get(group) ?? 0) + row.bits);
   }
 
-  const ranked = [...totals.entries()].sort((a, b) => b[1] - a[1]);
-  const max = Math.max(...ranked.map(([, v]) => v), 0.001);
+  const rows: BarRow[] = [...totals.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([label, value]) => ({ label, value }));
 
-  const chart = h('div', { class: 'bars', role: 'list' });
-  for (const [group, value] of ranked) {
-    const pct = (value / max) * 100;
-    append(chart, [
-      h(
-        'div',
-        { class: 'bars__row', role: 'listitem' },
-        h('span', { class: 'bars__label', text: group }),
-        h(
-          'span',
-          { class: 'bars__track' },
-          h('span', { class: 'bars__fill', style: `width:${pct.toFixed(2)}%` }),
-          h('span', { class: 'bars__tick', style: `left:${pct.toFixed(2)}%` }),
-        ),
-        h('span', { class: 'bars__value', text: bits(value) }),
-      ),
-    ]);
-  }
-
-  return chart;
+  // Exposed rather than measured: these are the bits that single this browser out,
+  // which is the one quantity on the page that is about the visitor's exposure
+  // rather than about the pool.
+  return barRows(rows, { register: 'exposed' });
 }
 
-export function renderReadout(
-  mount: HTMLElement,
+export function renderMeasurement(
+  board: Board,
   report: EntropyReport,
   nearUniqueIds: readonly string[],
-  failedProbes: string[],
-  sections: SectionCounter,
-): void {
-  clear(mount);
-
+  failedProbes: readonly string[],
+  probeCount: number,
+): HTMLElement {
   const dominant = report.dominantAttribute;
   const channel = glitchChannel(dominant);
 
@@ -97,8 +71,8 @@ export function renderReadout(
         {},
         h('th', { text: 'Attribute' }),
         h('th', { text: 'Value' }),
-        h('th', { text: 'Seen', style: 'text-align:right' }),
-        h('th', { text: 'Bits', style: 'text-align:right' }),
+        h('th', { class: 'num', text: 'Seen' }),
+        h('th', { class: 'num', text: 'Bits' }),
       ),
     ),
   ]);
@@ -113,7 +87,12 @@ export function renderReadout(
         {},
         h('td', { text: attrLabel(row.attr) }),
         h('td', { class: 'value', text: shown }),
-        h('td', { class: 'num', text: row.count === 0 ? 'only you' : `${int(row.count)}×` }),
+        // "Only you" is the identifying case, and it is the only cell in the table
+        // allowed to be red.
+        h('td', {
+          class: row.count === 0 ? 'num num--exposed' : 'num',
+          text: row.count === 0 ? 'only you' : `${int(row.count)}×`,
+        }),
         h(
           'td',
           { class: 'num' },
@@ -128,59 +107,169 @@ export function renderReadout(
   }
   table.appendChild(body);
 
-  // The forty-row table is the evidence, not the headline, so it now sits
-  // behind a disclosure. The section opens on the two figures and the shape of
-  // the groups; the visitor who wants every value still gets every value.
   const details = h(
     'details',
     { class: 'details' },
-    h('summary', { class: 'details__summary', text: `Every attribute measured (${int(report.perAttribute.length)})` }),
-    h('div', { class: 'scroll-x' }, table),
+    h('summary', {
+      class: 'details__summary',
+      text: `Every attribute measured (${int(report.perAttribute.length)})`,
+    }),
+    h(
+      'div',
+      { class: 'details__body' },
+      windowed(
+        {
+          caption: 'Your own vector, ranked by surprisal',
+          count: `${int(report.perAttribute.length)} rows`,
+          flush: true,
+        },
+        table,
+      ),
+    ),
   );
 
-  append(mount, [
-    sections.section(
-      { id: 'measurement', eyebrow: 'Measurement' },
-      h(
-        'div',
-        { class: 'readout' },
-        figure(
-          `1 in ${int(report.oneInN)}`,
-          report.atCeiling
-            ? 'at the bound of this pool — the pool cannot separate you further'
-            : 'against the entries in this pool',
-        ),
-        h('p', { class: 'caveat', text: POOL_BOUND_CAVEAT(report.poolSize, report.ceilingBits) }),
+  return board.sector(
+    'measurement',
+    {
+      title: 'What this browser gave away',
+      lede: 'Read once, in front of you, from surfaces that needed no permission.',
+      meta: `1 in ${int(report.oneInN)} · ${bits(report.modelledBits)} bits`,
+    },
+
+    h(
+      'div',
+      { class: 'readout' },
+      figure(
+        `1 in ${int(report.oneInN)}`,
+        report.atCeiling
+          ? 'at the bound of this pool — the pool cannot separate you further'
+          : 'against the entries in this pool',
+        'exposed',
       ),
-      h('hr', { class: 'rule' }),
-      h(
-        'div',
-        { class: 'readout' },
-        figure(bits(report.observedBits), 'bits, assuming the attributes are independent'),
-        figure(bits(report.modelledBits), 'bits, once the dependencies are subtracted'),
-        figure(bits(report.gapBits), 'bits of double-counting between the two'),
-      ),
-      h('p', { text: GAP_EXPLANATION }),
-      h('hr', { class: 'rule' }),
-      h('span', { class: 'label', text: 'Bits of identifying information per attribute group' }),
-      groupChart(report),
-      dominant
-        ? h(
-            'p',
-            { class: 'mono dim' },
-            `Largest single contributor: ${attrLabel(dominant)}. In the monument that drives `,
-            h('span', { class: 'entry__id', text: CHANNEL_DESCRIPTION[channel] ?? 'no distinct character' }),
-            `. The amount of corruption is your total; its character is this attribute.`,
-          )
-        : null,
-      failedProbes.length > 0
-        ? h('p', {
-            class: 'mono dim',
-            text: `Probes that returned nothing: ${failedProbes.join(', ')}. Recorded as null, which is itself a distinguishing answer.`,
-          })
-        : null,
-      h('p', { class: 'mono dim', text: NEAR_UNIQUE_NOTE(nearUniqueIds.map(attrLabel)) }),
-      details,
+      h('p', { class: 'caveat', text: POOL_BOUND_CAVEAT(report.poolSize, report.ceilingBits) }),
     ),
-  ]);
+
+    h('hr', { class: 'rule' }),
+
+    /*
+     * The two figures and the gap between them. The naive sum is red because it is
+     * the number the industry quotes about you; the modelled figure is turquoise
+     * because the model computed it; the gap is the argument.
+     */
+    h(
+      'div',
+      { class: 'readout' },
+      figure(bits(report.observedBits), 'bits, assuming the attributes are independent', 'exposed'),
+      figure(bits(report.modelledBits), 'bits, once the dependencies are subtracted', 'inferred'),
+      figure(bits(report.gapBits), 'bits of double-counting between the two'),
+    ),
+    h('p', { text: GAP_EXPLANATION }),
+
+    // How much of the naive claim survives the correction, as one position in a
+    // range rather than a third number to hold in your head.
+    h('div', {}, h('span', { class: 'label', text: 'How much of the naive figure survives' }),
+      meter(report.observedBits > 0 ? report.modelledBits / report.observedBits : 0, {
+        register: 'inferred',
+        label: 'Modelled bits as a fraction of the naive sum',
+        scale: [
+          'none of it — every bit was double-counted',
+          'all of it — the attributes were genuinely independent',
+        ],
+      }),
+      h('p', {
+        class: 'gloss',
+        text: `${pct(report.observedBits > 0 ? report.modelledBits / report.observedBits : 0)} of the naive sum survives the correction. The rest was the same information counted more than once.`,
+      }),
+    ),
+
+    h('hr', { class: 'rule rule--double' }),
+    h(
+      'div',
+      { class: 'label label--ruled' },
+      h('span', { text: 'Bits of identifying information per attribute group' }),
+      h('span', { class: 'label__count', text: `${bits(report.observedBits)} bits in total` }),
+    ),
+    groupChart(report),
+
+    dominant
+      ? h(
+          'div',
+          { class: 'stack-tight' },
+          keyed([
+            {
+              key: 'largest contributor',
+              mark: 'reading',
+              value: `${attrLabel(dominant)} — ${bits(report.perAttribute.find((r) => r.attr === dominant)?.bits ?? 0)} bits`,
+              register: 'exposed',
+            },
+            {
+              key: 'channel',
+              mark: 'model',
+              value: CHANNEL_EFFECT[channel] ?? CHANNEL_EFFECT.none,
+              register: 'inferred',
+            },
+          ]),
+          h('p', { class: 'gloss', text: CHANNEL_NOTE }),
+        )
+      : null,
+
+    failedProbes.length > 0
+      ? h('p', {
+          class: 'gloss',
+          text: `Probes that returned nothing: ${failedProbes.join(', ')}. Recorded as null, which is itself a distinguishing answer.`,
+        })
+      : h('p', {
+          class: 'gloss',
+          text: `All ${int(probeCount)} probes answered. Nothing was refused and nothing timed out.`,
+        }),
+    h('p', { class: 'gloss', text: NEAR_UNIQUE_NOTE(nearUniqueIds.map(attrLabel)) }),
+    details,
+  );
+}
+
+// ---------------------------------------------------------------- sector 05
+
+export function renderInference(board: Board, estimate: AutomationEstimate): HTMLElement {
+  const agent = estimate.likelihood;
+
+  return board.sector(
+    'inference',
+    {
+      title: 'Person or process',
+      lede: 'One more field in the vector. Nothing on this page behaves differently because of it.',
+      meta: `agent ${prob(agent)}`,
+    },
+    h(
+      'div',
+      { class: 'readout' },
+      figure(prob(1 - agent), 'read as human', 'inferred'),
+      figure(prob(agent), 'read as agent', 'inferred'),
+    ),
+    h('div', {}, h('span', { class: 'label', text: 'Where the estimate sits' }),
+      meter(agent, {
+        register: 'inferred',
+        label: 'Automation likelihood',
+        scale: ['certainly a person', 'certainly a process'],
+      }),
+    ),
+    keyed([
+      {
+        key: 'features fired',
+        mark: estimate.reasons.length === 0 ? 'false' : 'true',
+        value:
+          estimate.reasons.length === 0
+            ? 'none — no automation feature was present'
+            : estimate.reasons.join('; '),
+        register: 'inferred',
+      },
+      {
+        key: 'basis',
+        mark: 'independent',
+        value: 'the static surface only. Nothing you did was watched.',
+      },
+      { key: 'consequence', mark: 'false', value: 'none. No code path reads this value.' },
+    ]),
+    h('p', { class: 'caveat', text: automationStatement(estimate) }),
+    h('p', { class: 'gloss', text: NO_GATE_NOTE }),
+  );
 }

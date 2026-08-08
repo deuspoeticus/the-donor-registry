@@ -1,0 +1,336 @@
+/*
+ * The head of the instrument: a running head, and a strip of readouts under it.
+ *
+ * Two rows, both fixed, both one line tall, and together they are the only thing on
+ * the page that never scrolls away. The top row is navigation — where you can go.
+ * The bottom row is state — where you are and what is true right now. They are
+ * separated because they answer different questions, and a control room that mixes
+ * the two has no instruments, only buttons.
+ *
+ * The bottom row is the one place on the page where the ground is ink rather than
+ * paper. That is the distinction the design is making between the *register* and
+ * the *instrument reading it*: the register is a sheet of paper and the readout is a
+ * lit panel bolted to the top of it.
+ */
+
+.head {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  background: var(--paper);
+  border-bottom: 1px solid var(--ink);
+}
+
+.head[hidden] {
+  display: none;
+}
+
+/* ---------------------------------------------------------------- running head */
+
+.nav {
+  height: var(--nav-h);
+  border-bottom: 1px solid var(--rule);
+}
+
+.nav__inner {
+  max-width: var(--frame);
+  margin: 0 auto;
+  height: 100%;
+  padding: 0 var(--gutter);
+  display: flex;
+  align-items: stretch;
+  gap: clamp(0.75rem, 2vw, 2rem);
+}
+
+/*
+ * The mark. The registry's name in the bitmap face, with the slogan set beside it
+ * in the grotesque at label size — one object, two registers, which is the whole
+ * typographic argument of the page in two centimetres.
+ */
+.nav__mark {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5em;
+  flex: none;
+  border: 0;
+  background: transparent;
+  padding: 0 0.7em 0 0;
+  margin: 0;
+  color: var(--ink);
+  align-self: center;
+}
+
+.nav__title {
+  font-family: var(--font-display);
+  font-size: 1.65rem;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  -webkit-font-smoothing: none;
+  white-space: nowrap;
+}
+
+.nav__slogan {
+  font-family: var(--font-sans);
+  font-size: var(--t-label);
+  font-weight: 600;
+  font-stretch: 82%;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--red-ink);
+  white-space: nowrap;
+}
+
+/* The link row scrolls rather than wraps: the head must stay two lines tall for the
+   scroll-margin below it to remain a single known quantity. */
+.nav__wrap {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  display: flex;
+  align-items: stretch;
+}
+
+.nav__wrap::-webkit-scrollbar {
+  display: none;
+}
+
+/*
+ * Eleven addresses with their sigils cannot fit any laptop, so the row scrolls — and a
+ * scroller with no edge is a row that silently ends. This fades the last few pixels
+ * against the paper, which is the whole of the affordance: something continues.
+ */
+.nav__wrap {
+  mask-image: linear-gradient(to right, transparent 0, #000 0.75rem, #000 calc(100% - 1.5rem), transparent 100%);
+}
+
+@media (min-width: 110rem) {
+  /* Wide enough for every address at once; the fade would be lying. */
+  .nav__wrap {
+    mask-image: none;
+  }
+}
+
+.nav__links {
+  display: flex;
+  gap: 0;
+  justify-content: flex-end;
+  min-width: max-content;
+  margin-left: auto;
+}
+
+/*
+ * A nav link is an address, a sigil and a name at reading size. See --nav-h in tokens.css
+ * for what it was and why that was wrong.
+ */
+.nav__link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0 clamp(0.5rem, 0.9vw, 0.8rem);
+  font-family: var(--font-sans);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  font-stretch: 92%;
+  letter-spacing: 0.005em;
+  text-transform: none;
+  color: var(--ink-2);
+  text-decoration: none;
+  white-space: nowrap;
+  border-left: 1px solid var(--rule);
+  transition: color 110ms linear, background-color 110ms linear;
+}
+
+.nav__link:last-child {
+  border-right: 1px solid var(--rule);
+}
+
+.nav__num {
+  font-family: var(--font-mono);
+  font-size: var(--t-label);
+  font-variant-numeric: tabular-nums slashed-zero;
+  letter-spacing: 0;
+  color: var(--ink-3);
+  transition: color 110ms linear, background-color 110ms linear;
+}
+
+/* The sigil inherits the link's colour, so it inverts with the link and needs no rule of
+   its own beyond holding its ground. */
+.nav__sigil {
+  opacity: 0.9;
+  transition: opacity 110ms linear;
+}
+
+/*
+ * The sector you are in. Fully inverted — ink ground, paper letters — because that
+ * is the page's one gesture for "this is the thing in force", and it is the same
+ * gesture the catalogue uses for an entry you are about to wear.
+ */
+.nav__link.is-current {
+  color: var(--paper);
+  background: var(--ink);
+}
+
+.nav__link.is-current .nav__num {
+  color: var(--red-lit);
+}
+
+.nav__link.is-current .nav__sigil,
+.nav__link:hover .nav__sigil {
+  opacity: 1;
+}
+
+/* Anything with an ink ground re-points the sigils' cool accent; see tokens.css. */
+.nav__link.is-current,
+.status {
+  --sigil-cyan: var(--cyan-lit);
+}
+
+/*
+ * The names survive much further down the range than they used to, because they *are*
+ * the navigation and a row of bare addresses is a puzzle. Below the breakpoint the sigil
+ * carries the sector, which is most of what a sigil is for.
+ */
+@media (max-width: 78rem) {
+  .nav__name {
+    display: none;
+  }
+}
+
+/*
+ * The slogan goes first when the row runs out of width. It is stated at full size in the
+ * masthead two hundred pixels below; the addresses are not stated anywhere else.
+ */
+@media (max-width: 92rem) {
+  .nav__slogan {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------- status strip */
+
+/*
+ * Seven readouts on a dark panel. Every one of them is a fact the visitor would
+ * otherwise have to scroll to find, and the last is a switch rather than a reading —
+ * kept in the same row on purpose, because on this page the state of the instrument
+ * and the settings of the instrument are the same kind of information.
+ */
+.status {
+  height: var(--status-h);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.status::-webkit-scrollbar {
+  display: none;
+}
+
+.status__inner {
+  max-width: var(--frame);
+  margin: 0 auto;
+  height: 100%;
+  padding: 0 var(--gutter);
+  display: flex;
+  align-items: stretch;
+  min-width: max-content;
+}
+
+.cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0 clamp(0.6rem, 1.4vw, 1.1rem);
+  border-right: 1px solid var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--t-label);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.cell:first-child {
+  padding-left: 0;
+}
+
+.cell__sigil {
+  opacity: 0.85;
+}
+
+.cell__key {
+  color: var(--ink-4);
+}
+
+.cell__value {
+  color: var(--paper);
+  font-variant-numeric: tabular-nums slashed-zero;
+}
+
+/* On ink, the accents take their lit values. See tokens.css. */
+.cell__value--exposed {
+  color: var(--red-lit);
+}
+
+.cell__value--inferred {
+  color: var(--cyan-lit);
+}
+
+.cell__value--idle {
+  color: var(--ink-4);
+}
+
+/* The one control in the strip. Reads as a readout until you touch it. */
+.cell--switch {
+  margin-left: auto;
+  border-right: 0;
+  border-left: 1px solid var(--ink-2);
+  padding-right: 0;
+}
+
+.cell__switch {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: var(--paper);
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  transition: color 110ms linear;
+}
+
+.cell__switch:hover {
+  color: var(--cyan-lit);
+}
+
+.cell__lamp {
+  width: 0.5rem;
+  height: 0.5rem;
+  display: block;
+  background: var(--cyan);
+  box-shadow: 0 0 6px var(--cyan);
+}
+
+.cell__switch[aria-pressed='false'] .cell__lamp {
+  background: var(--ink-3);
+  box-shadow: none;
+}
+
+.cell__switch:focus-visible {
+  outline-color: var(--cyan);
+}
+
+@media (max-width: 44rem) {
+  .cell--drop {
+    display: none;
+  }
+}

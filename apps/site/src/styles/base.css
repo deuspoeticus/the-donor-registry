@@ -1,0 +1,367 @@
+/*
+ * The ground, and the type it carries.
+ *
+ * There is no background artwork. The generative field that used to sit behind all
+ * of this is gone and nothing has replaced it, so the panels no longer blur a
+ * canvas they are floating over — a backdrop-filter with nothing behind it is a
+ * cost with no image.
+ *
+ * What is here instead is paper. The whole page is a ruled sheet: hairlines, an
+ * address column, small caps, and figures set in a bitmap serif. It should read as
+ * something an institution keeps rather than something a company ships.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--paper);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background: var(--paper);
+  color: var(--ink-2);
+  font-family: var(--font-sans);
+  font-size: var(--t-md);
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: var(--track-body);
+  /* A grotesque wants its figures aligned and its zero unambiguous. */
+  font-variant-numeric: slashed-zero;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+main {
+  position: relative;
+  z-index: 1;
+  padding-top: var(--head-h);
+}
+
+/* ---------------------------------------------------------------- headings */
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  color: var(--ink);
+  font-weight: 400;
+  line-height: 1.02;
+  text-wrap: balance;
+}
+
+/*
+ * The display face is a bitmap on a 24-unit grid. Antialiasing it is the one thing
+ * that destroys it: the whole character of the face is that you can count the
+ * pixels, so smoothing is refused here and nowhere else.
+ */
+.display,
+h1,
+.sector__title,
+.figure__value,
+.tile__value,
+.proposition,
+.rite__title,
+.wordmark {
+  font-family: var(--font-display);
+  letter-spacing: 0;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: unset;
+  font-smooth: never;
+  text-rendering: geometricPrecision;
+}
+
+h1 {
+  font-size: var(--t-mega);
+  text-transform: uppercase;
+  line-height: 0.86;
+}
+
+h2 {
+  font-size: var(--t-lg);
+}
+
+h3 {
+  font-size: var(--t-lg);
+}
+
+h4 {
+  font-size: var(--t-md);
+}
+
+/*
+ * A subhead inside a sector: the grotesque, not the bitmap, because it sits inside
+ * running text and a bitmap serif at body scale is unreadable.
+ */
+.sub {
+  font-family: var(--font-sans);
+  font-size: var(--t-lg);
+  font-weight: 600;
+  letter-spacing: -0.028em;
+  color: var(--ink);
+  line-height: 1.12;
+}
+
+p {
+  margin: 0;
+  max-width: var(--measure);
+  text-wrap: pretty;
+}
+
+strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------------- links */
+
+a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--rule-lit);
+  text-underline-offset: 0.2em;
+  transition: text-decoration-color 120ms linear, color 120ms linear,
+    background-color 120ms linear;
+}
+
+a:hover {
+  /* Red: a link is a way out of this origin, and leaving is the event. */
+  color: var(--red-ink);
+  text-decoration-color: var(--red-ink);
+}
+
+a[target='_blank']::after {
+  content: '↗';
+  font-family: var(--font-mark);
+  font-size: 0.8em;
+  margin-left: 0.25em;
+  color: var(--ink-4);
+  text-decoration: none;
+}
+
+/* ---------------------------------------------------------------- the registers
+ *
+ * Five ways of speaking, and they are not interchangeable.
+ *
+ *   body      the piece talking. The grotesque, at reading size.
+ *   .gloss    the piece annotating itself — a caveat, a limit, a footnote. Same
+ *             face, smaller, lighter. This is what most of the small print on the
+ *             page used to be set in monospace for, which made every aside look
+ *             like machine output.
+ *   .mono     machine output, and *only* inside a bounded window (see .window).
+ *   .label    names a control or a column. Small caps, condensed, tracked out.
+ *   .mark     the notation. See ui/glyphs.ts.
+ */
+
+.gloss {
+  font-family: var(--font-sans);
+  font-size: var(--t-sm);
+  line-height: 1.5;
+  letter-spacing: var(--track-body);
+  color: var(--ink-3);
+  max-width: var(--measure);
+}
+
+.gloss strong,
+.gloss .fact {
+  color: var(--ink);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: var(--t-data);
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums slashed-zero;
+}
+
+.label {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: var(--t-label);
+  font-weight: 600;
+  font-stretch: 82%;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 0.85em;
+}
+
+/* A label that also states a quantity: the count sits at the far right of the rule. */
+.label--ruled {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 0.5em;
+}
+
+.label__count {
+  font-family: var(--font-mono);
+  font-size: var(--t-micro);
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums slashed-zero;
+}
+
+/*
+ * A sigil: sixteen pixels of downsampled emoji, drawn in `currentColor` so that it
+ * inverts with whatever it is sitting on. See ui/sigils.ts for the division of labour —
+ * sigils name things, marks name operations and relations.
+ *
+ * `--sigil-px` is written inline by the renderer, so the box reserves exactly the space
+ * the sprite occupies and a row of them cannot shift as it paints.
+ */
+.sigil {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--sigil-px, 16px);
+  height: var(--sigil-px, 16px);
+  vertical-align: -0.18em;
+}
+
+.sigil__art {
+  display: block;
+  /* Belt and braces with the SVG attribute: some engines drop it under a transform. */
+  shape-rendering: crispEdges;
+  image-rendering: pixelated;
+}
+
+.mark {
+  font-family: var(--font-mark);
+  font-style: normal;
+  line-height: 1;
+  /* Marks sit in text and in tables; a fixed advance keeps columns aligned. */
+  display: inline-block;
+  min-width: 1em;
+  text-align: center;
+}
+
+.dim {
+  color: var(--ink-3);
+}
+
+.dimmer {
+  color: var(--ink-3);
+}
+
+/*
+ * The three semantic colours, named for what they mean rather than for the hue, so
+ * a rule that uses one has to have decided which claim it is making. These are the
+ * text values; see tokens.css for why each hue is declared three times.
+ */
+.fact {
+  color: var(--ink);
+}
+
+.exposed {
+  color: var(--red-ink);
+}
+
+.inferred {
+  color: var(--cyan-ink);
+}
+
+/* ---------------------------------------------------------------- boot */
+
+.noscript,
+.boot {
+  position: relative;
+  z-index: 2;
+  padding: calc(var(--gutter) * 1.5) var(--gutter);
+  max-width: var(--measure);
+  color: var(--ink-3);
+}
+
+.boot__line {
+  font-family: var(--font-display);
+  font-size: var(--t-hero);
+  color: var(--ink);
+  margin: 0 0 0.5em;
+  -webkit-font-smoothing: none;
+}
+
+.boot__note {
+  margin: 0;
+  font-size: var(--t-sm);
+}
+
+/* ---------------------------------------------------------------- utilities */
+
+.stack > * + * {
+  margin-top: 1.15em;
+}
+
+.stack-tight > * + * {
+  margin-top: 0.5em;
+}
+
+.rule {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: clamp(1.75rem, 4vw, 3rem) 0;
+}
+
+/*
+ * A double rule. The registry's own punctuation: it separates one kind of thing
+ * from another, where a single hairline separates two of the same kind.
+ */
+.rule--double {
+  border-top: 3px double var(--rule-lit);
+}
+
+.scroll-x {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+  scrollbar-color: var(--rule-lit) transparent;
+}
+
+.grid-2 {
+  display: grid;
+  gap: clamp(1.5rem, 4vw, 3rem);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  align-items: start;
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.list > li {
+  padding: 0.65em 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: var(--t-sm);
+  color: var(--ink-3);
+}
+
+.list > li:last-child {
+  border-bottom: 0;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+:focus-visible {
+  outline: 2px solid var(--red-ink);
+  outline-offset: 2px;
+}

@@ -1,0 +1,382 @@
+/*
+ * Controls, and the consent gate.
+ *
+ * The gate is the anti-dark-pattern (§6f) and it is part of the artwork rather than
+ * compliance furniture. Three tiers, identical box, identical padding, identical
+ * type, nothing preselected, and the declining choice the same size as the accepting
+ * one in the same row. Every rule below that enforces symmetry is load-bearing:
+ * relaxing one for conversion would change what the piece says, and the CSS is
+ * written so that relaxing one takes deliberate effort.
+ *
+ * The one thing the tiers *do* differ in is the mark and the cost line, and those
+ * differ because the tiers differ in fact — a tier that transmits says so in red, and
+ * a tier that collects nothing says that in grey. Stating the consequence is the
+ * opposite of a dark pattern.
+ */
+
+button,
+.button {
+  font-family: var(--font-sans);
+  font-size: var(--t-data);
+  font-weight: 600;
+  font-stretch: 88%;
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--ink);
+  padding: 0.75em 1.2em;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6em;
+  transition: color 110ms linear, background-color 110ms linear, border-color 110ms linear,
+    box-shadow 110ms linear;
+}
+
+button:disabled,
+.button[aria-disabled='true'] {
+  color: var(--ink-4);
+  border-color: var(--rule);
+  background: var(--paper-2);
+}
+
+.button__mark {
+  font-family: var(--font-mark);
+  font-size: 1.05em;
+  color: var(--ink-3);
+  transition: color 110ms linear, transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* A sigil inside a control. Only the rite buttons carry one: a sprite this size on an
+   ordinary button would outrank its own label. */
+.button__sigil {
+  color: var(--red-ink);
+  transition: color 110ms linear, transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/*
+ * A control whose effect leaves this browser, or takes something out of the pool. It
+ * is larger, it carries its seal, and it is red — the three things that make it
+ * findable on a page of a hundred readings without making its opposite harder to
+ * click.
+ */
+.button--rite {
+  font-size: var(--t-sm);
+  padding: 0.95em 1.5em;
+  border-width: 2px;
+  border-color: var(--red);
+  color: var(--red-ink);
+}
+
+.button--rite .button__mark {
+  color: var(--red);
+  font-size: 1.25em;
+}
+
+/* ---------------------------------------------------------------- the tiers */
+
+.tiers {
+  display: grid;
+  gap: 1px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  background: var(--rule);
+  border: 1px solid var(--ink);
+}
+
+.tier {
+  background: var(--paper);
+  padding: clamp(1.25rem, 2.8vw, 2rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.9em;
+  text-align: left;
+  align-items: stretch;
+  /* Identical box for all three: no border, no transform, no accent, no shadow. */
+  border: 0;
+  text-transform: none;
+  letter-spacing: var(--track-body);
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-stretch: 100%;
+  font-size: var(--t-md);
+  transition: background-color 140ms linear, color 140ms linear;
+}
+
+.tier__sigil {
+  color: var(--ink-2);
+  transition: color 140ms linear;
+}
+
+.tier__name {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  line-height: 1;
+  letter-spacing: 0;
+  color: var(--ink);
+  -webkit-font-smoothing: none;
+  transition: color 140ms linear;
+}
+
+.tier__body {
+  color: var(--ink-2);
+  font-size: var(--t-sm);
+  line-height: 1.5;
+  flex: 1;
+  transition: color 140ms linear;
+}
+
+/* What the tier costs, in the same position and at the same size on all three. */
+.tier__note {
+  font-family: var(--font-sans);
+  font-size: var(--t-micro);
+  font-weight: 600;
+  font-stretch: 82%;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding-top: 0.8em;
+  border-top: 1px solid var(--rule);
+  transition: color 140ms linear, border-color 140ms linear;
+}
+
+.tier__note--transmits {
+  color: var(--red-ink);
+}
+
+/* The tier currently in force. Inverted, like the current sector in the head. */
+.tier[aria-pressed='true'] {
+  background: var(--ink);
+  --sigil-cyan: var(--cyan-lit);
+}
+
+.tier[aria-pressed='true'] .tier__name,
+.tier[aria-pressed='true'] .tier__body {
+  color: var(--paper);
+}
+
+.tier[aria-pressed='true'] .tier__sigil {
+  color: var(--paper);
+}
+
+.tier[aria-pressed='true'] .tier__note {
+  color: var(--ink-4);
+  border-top-color: var(--ink-2);
+}
+
+.tier[aria-pressed='true'] .tier__note--transmits {
+  color: var(--red-lit);
+}
+
+/* ---------------------------------------------------------------- payload */
+
+/*
+ * The exact bytes. Set in the monospace, so it lives in a window like every other
+ * monospace run on the page — but this window is the deed being signed, so its frame
+ * is the heavy one.
+ */
+.payload {
+  font-family: var(--font-mono);
+  font-size: var(--t-data);
+  line-height: 1.5;
+  color: var(--ink-2);
+  background: var(--sink);
+  border: 0;
+  padding: 0.9rem;
+  max-height: 24rem;
+  overflow: auto;
+  white-space: pre;
+  margin: 0;
+  font-variant-numeric: slashed-zero;
+  scrollbar-color: var(--rule-lit) transparent;
+}
+
+/*
+ * The revocation token. Red, boxed, and the only input on the page — it is the single
+ * string standing between an entry and the rest of its existence, and it is shown
+ * once.
+ */
+.payload--token {
+  white-space: normal;
+  width: 100%;
+  max-height: none;
+  color: var(--red-ink);
+  background: var(--paper);
+  border: 2px solid var(--red);
+  font-size: var(--t-sm);
+  padding: 0.8em;
+}
+
+/*
+ * The confirmation row. Both choices are the same size, in the same row, with the
+ * same styling, and decline is first so the habitual rightward click is not the
+ * transmitting one.
+ */
+.choice-row {
+  display: flex;
+  gap: 1px;
+  margin-top: 1.25rem;
+  background: var(--ink);
+  border: 1px solid var(--ink);
+  flex-wrap: wrap;
+}
+
+.choice-row > button,
+.choice-row > .button {
+  flex: 1 1 14rem;
+  border: 0;
+  background: var(--paper);
+  padding: 1.05em 1.2em;
+  justify-content: flex-start;
+  font-size: var(--t-sm);
+}
+
+/* ---------------------------------------------------------------- catalogue */
+
+.catalogue {
+  display: grid;
+  gap: 1px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
+  background: var(--rule);
+  border: 1px solid var(--ink);
+}
+
+.entry {
+  position: relative;
+  background: var(--paper);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4em;
+  align-items: flex-start;
+  text-align: left;
+  border: 0;
+  font-family: var(--font-mono);
+  font-size: var(--t-data);
+  font-weight: 400;
+  font-stretch: 100%;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink-3);
+  transition: background-color 130ms linear, color 130ms linear;
+}
+
+.entry__id {
+  color: var(--ink);
+  font-size: var(--t-data);
+  word-break: break-all;
+  transition: color 130ms linear;
+}
+
+.entry__line {
+  font-family: var(--font-sans);
+  font-size: var(--t-micro);
+  font-stretch: 82%;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  transition: color 130ms linear;
+}
+
+/*
+ * The invitation, which is also the joke.
+ *
+ * It is in the flow rather than layered over the hash, and it is legible before you
+ * hover as well as after — a strip along the bottom of the tile that says what the
+ * tile is for. On hover the whole tile inverts and this line goes red-on-ink, so the
+ * offer arrives without anything becoming unreadable to make room for it.
+ */
+.entry__offer {
+  display: flex;
+  align-items: center;
+  gap: 0.45em;
+  width: 100%;
+  margin-top: auto;
+  padding-top: 0.55em;
+  border-top: 1px solid var(--rule);
+  font-family: var(--font-sans);
+  font-size: var(--t-micro);
+  font-weight: 600;
+  font-stretch: 82%;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  transition: color 130ms linear, border-color 130ms linear;
+}
+
+.entry__offer .mark {
+  color: var(--red-ink);
+  transition: color 130ms linear;
+}
+
+/* The entry currently open. Inverted, like the current sector and the tier in force. */
+.entry[aria-current='true'] {
+  background: var(--ink);
+  color: var(--ink-4);
+  --sigil-cyan: var(--cyan-lit);
+}
+
+.entry[aria-current='true'] .entry__id {
+  color: var(--paper);
+}
+
+.entry[aria-current='true'] .entry__line {
+  color: var(--ink-4);
+}
+
+.entry[aria-current='true'] .entry__offer {
+  color: var(--paper);
+  border-top-color: var(--ink-2);
+}
+
+.entry[aria-current='true'] .entry__offer .mark {
+  color: var(--red-lit);
+}
+
+/*
+ * The donor's own entry, before the build publishes it. A dashed rule and a value
+ * shift rather than an accent: "not published yet" is a fact about the catalogue's
+ * schedule, not about the identity, and neither red nor turquoise is allowed to say
+ * it.
+ */
+.entry--pending {
+  box-shadow: inset 3px 0 0 var(--ink-4);
+}
+
+.entry__pending {
+  color: var(--ink-2);
+  border-top: 1px dashed var(--rule-lit);
+  padding-top: 0.5em;
+  width: 100%;
+  font-family: var(--font-sans);
+  font-size: var(--t-micro);
+  font-stretch: 82%;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ---------------------------------------------------------------- toggles */
+
+.toggle {
+  display: flex;
+  gap: 0.7em;
+  align-items: flex-start;
+  font-family: var(--font-sans);
+  font-size: var(--t-sm);
+  color: var(--ink-3);
+  max-width: var(--measure);
+  line-height: 1.5;
+  padding: 0.5em 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.toggle input {
+  margin: 0.3em 0 0;
+  accent-color: var(--red-ink);
+  flex: none;
+}
+
+.toggle strong {
+  color: var(--ink);
+  font-weight: 600;
+}

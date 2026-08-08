@@ -32,6 +32,14 @@ import {
 
 const BUDGET_MS = 2500;
 
+/**
+ * Exported so the interface can state the shape of the collection rather than
+ * repeating it as prose. The page used to hard-code "Fourteen probes, in parallel,
+ * with a 2500 ms budget" in its copy, which was a claim about this file that this
+ * file could not keep true.
+ */
+export const PROBE_BUDGET_MS = BUDGET_MS;
+
 interface Probe {
   name: string;
   run: () => ProbeResult | Promise<ProbeResult>;
@@ -53,6 +61,9 @@ const PROBES: Probe[] = [
   { name: 'math', run: probeMath },
   { name: 'storage', run: probeStorage },
 ];
+
+/** How many surfaces are read. See PROBE_BUDGET_MS. */
+export const PROBE_COUNT = PROBES.length;
 
 function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
   return new Promise((resolve) => {

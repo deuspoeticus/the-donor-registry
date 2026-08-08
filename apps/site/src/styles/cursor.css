@@ -1,0 +1,87 @@
+/*
+ * The cursors.
+ *
+ * The pointing hand your operating system draws when you hover a link is a **manicule**:
+ * a hand with an extended index finger, inked into the margin of a manuscript beside a
+ * passage the reader wanted to find again. Scribes were using it in the twelfth century.
+ * It is the oldest surviving interface convention there is, it was already six hundred
+ * years old when anybody built a machine to put it on a screen, and almost nobody who
+ * clicks one knows that.
+ *
+ * So the joke is not that these cursors are medieval. It is that the medieval one was
+ * there first and every operating system has been drawing a smoothed, forgotten version
+ * of it ever since; this page draws it back, from the same twenty sprites the interface
+ * is built out of.
+ *
+ *   default    a dagger — the thing that points, and unmakes
+ *   pointer    the manicule
+ *   help       the same, over the drawings, which explain rather than navigate
+ *   progress   an hourglass, for as long as the collector is running and no longer
+ *
+ * ---------------------------------------------------------------- where they come from
+ *
+ * `--cursor-dagger`, `--cursor-hand` and `--cursor-hourglass` are **written at boot by
+ * `ui/sigils.ts`**, not declared here. They are downsampled emoji (see
+ * `scripts/fetch-sigils.mjs`) and they are the same pixel data the nav, the tiers and the
+ * rites draw, so hard-coding them in the stylesheet would have meant two copies of twenty
+ * sprites that could drift apart. Every rule below names the system cursor it falls back
+ * to, so the few milliseconds before that runs are an ordinary arrow rather than nothing.
+ *
+ * Encoding note, because the failure is silent: the generator emits
+ * `data:image/svg+xml,` with a percent-encoded payload and never `;utf8,` — with the
+ * `;utf8` parameter the bytes are taken literally, the payload arrives as the *text*
+ * `%3Csvg`, and the browser falls back to the system cursor with no error anywhere.
+ */
+
+body {
+  cursor: var(--cursor-dagger), default;
+}
+
+a,
+button,
+.button,
+summary,
+label.toggle,
+.tier,
+.entry,
+.nav__link,
+.nav__mark,
+.cell__switch,
+[role='button'] {
+  cursor: var(--cursor-hand), pointer;
+}
+
+/*
+ * The drawings are read by pointing at things, so the manicule follows the cursor into
+ * them. They are not clickable and the cursor does not claim they are — `help` underneath
+ * rather than `pointer`, because what happens when you point at a node is that it
+ * explains itself.
+ */
+.tree__group,
+.matrix__cell,
+.bars__row,
+.hist__col,
+.tile,
+.kv__row {
+  cursor: var(--cursor-hand), help;
+}
+
+/* The seconds the collector is running, and nothing else on the page. */
+body[data-busy='true'],
+body[data-busy='true'] * {
+  cursor: var(--cursor-hourglass), progress !important;
+}
+
+/* Text stays text. A page you cannot select is a page you cannot quote. */
+input,
+textarea,
+pre,
+.payload,
+td.value {
+  cursor: text;
+}
+
+button:disabled,
+.button[aria-disabled='true'] {
+  cursor: var(--cursor-dagger), not-allowed;
+}
