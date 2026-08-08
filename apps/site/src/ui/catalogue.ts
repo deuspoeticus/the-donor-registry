@@ -16,6 +16,8 @@ import {
   INSTALL_NOTE,
   MANAGERS,
   MODEL_ADDRESS,
+  NOT_YET_PUBLISHED,
+  NOT_YET_PUBLISHED_NOTE,
   TRY_ON_LIMIT,
   TRY_ON_NOTE,
   VERIFY_LINKS,
@@ -59,6 +61,8 @@ export function renderCatalogue(
   mount: HTMLElement,
   entries: Identity[],
   selectedId: string | null,
+  /** This browser's own donation, in the pool but not in the published file. */
+  pendingId: string | null,
   handlers: CatalogueHandlers,
   poolNote: string,
   sections: SectionCounter,
@@ -67,14 +71,36 @@ export function renderCatalogue(
 ): void {
   clear(mount);
 
-  const shown = expanded ? entries : entries.slice(0, CATALOGUE_PAGE);
+  /*
+   * The donor's own not-yet-published entry is pinned to the front.
+   *
+   * Everywhere else the pool is ordered by id, because an id is a hash and a
+   * hash says nothing about when an entry arrived — any other order would leak
+   * provenance through position. That constraint is about what the published
+   * catalogue discloses to other people. This entry is shown to exactly one
+   * browser, the one that donated it, and its provenance is the one fact that
+   * visitor already knows. Left in id order it sorts to an arbitrary position,
+   * which past the first page means the donor cannot find the thing they were
+   * just told to look for.
+   */
+  const pendingEntry = pendingId === null ? undefined : entries.find((e) => e.id === pendingId);
+  const ordered = pendingEntry
+    ? [pendingEntry, ...entries.filter((e) => e.id !== pendingId)]
+    : entries;
+
+  const shown = expanded ? ordered : ordered.slice(0, CATALOGUE_PAGE);
   const grid = h('div', { class: 'catalogue' });
   for (const entry of shown) {
+    // The donor's own entry, before the build publishes it. Marked in place of
+    // the wear line rather than beside it: "nobody has worn this yet" is true
+    // of it but beside the point, when the reason nobody has is that nobody
+    // else can see it.
+    const pending = entry.id === pendingId;
     append(grid, [
       h(
         'button',
         {
-          class: 'entry',
+          class: pending ? 'entry entry--pending' : 'entry',
           type: 'button',
           'aria-current': entry.id === selectedId ? 'true' : 'false',
           onclick: () => handlers.onOpen(entry.id),
@@ -82,14 +108,18 @@ export function renderCatalogue(
         h('span', { class: 'entry__id', text: entry.id.slice(0, 16) }),
         h('span', { class: 'dim', text: `${entry.createdAt} · worn ${int(entry.wearCount)}×` }),
         h('span', {
-          class: 'dimmer',
-          text: entry.wearCount > 1 ? `${bits(bitsDestroyedBy(entry.wearCount))} bits destroyed` : 'not yet shared',
+          class: pending ? 'entry__pending' : 'dimmer',
+          text: pending
+            ? NOT_YET_PUBLISHED
+            : entry.wearCount > 1
+              ? `${bits(bitsDestroyedBy(entry.wearCount))} bits destroyed`
+              : 'not yet shared',
         }),
       ),
     ]);
   }
 
-  const remaining = entries.length - shown.length;
+  const remaining = ordered.length - shown.length;
   const more = h('button', { type: 'button', onclick: onExpand }, `Show the remaining ${int(remaining)}`);
 
   append(mount, [
@@ -125,6 +155,8 @@ export function renderCatalogue(
 export function renderEntry(
   mount: HTMLElement,
   entry: Identity,
+  /** This entry is this browser's own donation and is not published yet. */
+  isPending: boolean,
   options: WearOptions,
   handlers: CatalogueHandlers,
   onOptionsChange: (next: WearOptions) => void,
@@ -354,6 +386,7 @@ export function renderEntry(
   append(mount, [
     sections.section(
       { id: 'entry', eyebrow: 'Entry', title: entry.id.slice(0, 24), solid: true },
+      isPending ? h('p', { class: 'mono entry__pending', text: NOT_YET_PUBLISHED_NOTE }) : null,
       h('p', {
         class: 'mono dim',
         text: `Entered the pool ${entry.createdAt}. Worn ${int(entry.wearCount)}×. ${entry.wearCount > 1 ? `${bits(bitsDestroyedBy(entry.wearCount))} bits of its surprisal destroyed.` : 'No one has worn it yet.'}`,

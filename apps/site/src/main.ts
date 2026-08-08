@@ -28,6 +28,7 @@ import {
   LAW_NOTE,
   MODEL_ADDRESS,
   NO_GATE_NOTE,
+  PENDING_PUBLICATION,
   PROPOSITION,
   REVOCATION_NOTE,
   RUNNING_HEAD,
@@ -37,9 +38,12 @@ import {
 import { channelIndexFor, createMonument, type FieldEntry, type Monument } from './monument/scene.js';
 import {
   donate,
+  forgetPending,
   hasWorn,
   loadPool,
-  reportForgeStats,
+  readForgeTotals,
+  recordForge,
+  rememberPending,
   revoke,
   wear,
   wornHere,
@@ -146,11 +150,48 @@ async function bootstrap(): Promise<void> {
   renderGate(app, poolSummary(), onChooseTier);
 }
 
+/**
+ * What the visitor is looking at, and what they can do to it.
+ *
+ * These are two facts, not one. The catalogue can be a real published pool
+ * while the service is down, and it can be the seeded launch file while the
+ * service is perfectly healthy. The old wording collapsed them — it read a
+ * failed API call as proof the entries were seeded — and would have been
+ * wrong in both of those cases.
+ */
 function poolSummary(): string {
-  const { stats, source, apiError } = state.pool;
-  const base = SYNTHETIC_DISCLOSURE(stats.syntheticCount, stats.size, stats.syntheticAtLaunch);
-  if (source === 'api') return base;
-  return `${base} The pool service is not answering (${apiError ?? 'unreachable'}), so this is the seeded launch file. It cannot grow while that is true: a donation will be refused rather than stored, and wear counts stay in this browser and are seen by nobody.`;
+  const { stats, source, generatedAt, writesAvailable, serviceError, withdrawnSinceBuild } =
+    state.pool;
+  const parts = [SYNTHETIC_DISCLOSURE(stats.syntheticCount, stats.size, stats.syntheticAtLaunch)];
+
+  if (source === 'launch') {
+    parts.push(
+      'This is the seeded launch file. No donation has ever entered it, and wear counts stay in this browser and are seen by nobody.',
+    );
+  } else if (generatedAt) {
+    parts.push(
+      // "Last changed", not "last built". The weekly job runs whether or not
+      // anything changed, and only rewrites the file when something did, so
+      // this date is the last time the pool actually moved. Reporting the build
+      // instead would put a fresh date on an identical catalogue every week.
+      `The catalogue last changed on ${generatedAt.slice(0, 10)}. A donation made since then is in the pool already and appears here at the next build.`,
+    );
+  }
+
+  if (withdrawnSinceBuild > 0) {
+    const s = withdrawnSinceBuild === 1;
+    parts.push(
+      `${withdrawnSinceBuild} ${s ? 'entry has' : 'entries have'} been withdrawn since that build and ${s ? 'is' : 'are'} not shown.`,
+    );
+  }
+
+  if (!writesAvailable) {
+    parts.push(
+      `The pool service is not answering (${serviceError ?? 'unreachable'}), so nothing can be donated, worn or withdrawn right now — and because withdrawals are checked against that service, this catalogue may still be listing an entry whose donor has taken it back.`,
+    );
+  }
+
+  return parts.join(' ');
 }
 
 /**
@@ -260,6 +301,17 @@ async function completeDonation(): Promise<void> {
     state.donatedId = result.id;
     state.revocationToken = result.revocationToken;
 
+    // The pool changed; the published catalogue has not. Held here so the donor
+    // is shown their own entry rather than a page that does not contain them,
+    // and `loadPool` drops it again the moment the build publishes it. The
+    // date matches what the service stored: bucketed to the day, never finer.
+    rememberPending({
+      id: result.id,
+      attrs: collection.attrs,
+      createdAt: new Date().toISOString().slice(0, 10),
+      wearCount: 0,
+    });
+
     // The pool just changed, so everything measured against it is restated.
     state.pool = await loadPool();
     state.model = buildEntropyModel(state.pool.entries.map((e) => e.attrs), ATTR_IDS);
@@ -335,6 +387,7 @@ function render(): void {
     catalogueMount,
     state.pool.entries,
     state.selectedId,
+    state.pool.pendingId,
     catalogueHandlers(),
     poolLine(),
     sections,
@@ -354,6 +407,7 @@ function render(): void {
       renderEntry(
         entryMount,
         entry,
+        entry.id === state.pool.pendingId,
         state.wearOptions,
         catalogueHandlers(),
         (next) => {
@@ -493,10 +547,13 @@ function donationPanel(): HTMLElement {
     revokeButton.disabled = true;
     try {
       await revoke(id, input.value.trim());
-      state.pool = await loadPool();
+      // Past the cache deliberately: the withdrawal was promised as immediate,
+      // and a minute-old list would show the donor the entry they just removed.
+      state.pool = await loadPool({ fresh: true });
       state.model = buildEntropyModel(state.pool.entries.map((e) => e.attrs), ATTR_IDS);
       state.forge = createForge(state.pool.entries);
       monument?.setField(fieldEntries());
+      forgetPending();
       state.donatedId = null;
       state.revocationToken = null;
       render();
@@ -519,6 +576,7 @@ function donationPanel(): HTMLElement {
           ? REVOCATION_NOTE
           : 'This signature was already in the pool, donated by another browser that produces exactly the same one. Nothing new was stored, and there is no new token — the entry belongs to whoever donated it first. You are, it turns out, not unique.',
       }),
+      h('p', { text: PENDING_PUBLICATION }),
       token ? input : null,
       token ? h('div', {}, revokeButton) : null,
       status,
@@ -532,8 +590,9 @@ function forgePanel(sections: SectionCounter): HTMLElement {
   const output = h('pre', { class: 'payload', text: 'Nothing manufactured yet.' });
   const counts = h('p', { class: 'mono dim' });
 
+  let totals = readForgeTotals();
   const updateCounts = () => {
-    counts.textContent = `${int(stats.attempts)} attempts this session · ${int(stats.discarded)} discarded · ${int(stats.discardedByLikelihood)} for implausibility · ${int(stats.discarded - stats.discardedByLikelihood)} for impossibility. Pool total: ${int(state.pool.stats.forgeriesDiscarded)} discarded across ${int(state.pool.stats.forgeAttempts)} attempts.`;
+    counts.textContent = `${int(stats.attempts)} attempts this session · ${int(stats.discarded)} discarded · ${int(stats.discardedByLikelihood)} for implausibility · ${int(stats.discarded - stats.discardedByLikelihood)} for impossibility. In this browser, across every sitting: ${int(totals.discarded)} discarded across ${int(totals.attempts)} attempts.`;
   };
   updateCounts();
 
@@ -541,9 +600,12 @@ function forgePanel(sections: SectionCounter): HTMLElement {
     const before = { attempts: stats.attempts, discarded: stats.discarded };
     const rng = rngFromHex(sha256(`forge:${Date.now()}:${Math.random()}`));
     const forged = state.forge.forge(rng);
-    updateCounts();
 
-    void reportForgeStats(stats.attempts - before.attempts, stats.discarded - before.discarded);
+    // The forge is the visitor's own machine doing the work, and its tally is
+    // kept where the work happened. Recorded before the readout is written so
+    // the two cannot show different numbers.
+    totals = recordForge(stats.attempts - before.attempts, stats.discarded - before.discarded);
+    updateCounts();
 
     if (!forged) {
       output.textContent = 'Nothing coherent came out of three thousand attempts. That happens, and it is the honest result rather than a failure to report.';
