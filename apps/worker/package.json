@@ -1,0 +1,34 @@
+{
+  "name": "@wearme/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The pool, on Cloudflare Workers and D1. Accepts donations, honours revocations, serves scripts — and nothing else.",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "seed:build": "tsx scripts/build-seed.ts",
+    "verify": "tsx scripts/verify.ts",
+    "publish:pool": "tsx scripts/publish-pool.ts",
+    "prune:revoked": "tsx scripts/prune-revoked.ts",
+    "db:create": "wrangler d1 create wear-me-pool",
+    "secret:limiter": "wrangler secret put LIMITER_SECRET",
+    "db:migrate": "wrangler d1 migrations apply wear-me-pool --remote",
+    "db:migrate:local": "wrangler d1 migrations apply wear-me-pool --local",
+    "db:seed": "wrangler d1 execute wear-me-pool --remote --file seed/0002_launch_pool.sql",
+    "db:seed:local": "wrangler d1 execute wear-me-pool --local --file seed/0002_launch_pool.sql",
+    "dev": "wrangler dev --port 8787",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@wearme/core": "*",
+    "hono": "^4.6.14",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241230.0",
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "wrangler": "^4.0.0"
+  }
+}

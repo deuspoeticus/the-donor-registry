@@ -1,0 +1,43 @@
+# The pool service.
+#
+# No `nodejs_compat` flag: @wearme/core is written against no runtime at all —
+# pure TypeScript, a hand-rolled synchronous SHA-256 — and Hono is the same.
+# Nothing here reaches for a Node built-in, so nothing here needs a shim.
+
+name = "wear-me-pool"
+main = "src/index.ts"
+compatibility_date = "2026-08-01"
+
+# Stated rather than defaulted. Wrangler enables both of these on its own when
+# they are absent, and warns that it is doing so.
+#
+# The workers.dev route is how the site reaches the pool at all, so it is on.
+#
+# Preview URLs are off. They publish every past version of this Worker at its
+# own permanent address, which for a service holding donated fingerprints means
+# a superseded version — including one with a bug this one has fixed — stays
+# reachable indefinitely. Nothing here uses them, and a service whose whole
+# claim is about what it does and does not retain should not quietly keep old
+# copies of itself running.
+workers_dev = true
+preview_urls = false
+
+[[d1_databases]]
+binding = "DB"
+database_name = "wear-me-pool"
+# Filled in by `npm run db:create`.
+database_id = "ac56fb4f-867d-4873-a8ba-a011e1afd29e"
+
+[vars]
+# The site stays on GitHub Pages at its published URL — the address printed in
+# the submitted application — so this service is cross-origin to it by design.
+ALLOWED_ORIGINS = "https://deuspoeticus.github.io"
+
+# Where emitted scripts say they came from, in their banner and @namespace.
+# The site, not this service: a wearer reading the script should be sent to the
+# piece, not to the database behind it.
+SITE_URL = "https://deuspoeticus.github.io/the-donor-registry/"
+
+# LIMITER_SECRET is set with `wrangler secret put LIMITER_SECRET`, not here.
+# It seeds the rotating salt that makes rate-limit rows unlinkable to callers;
+# committing it would undo exactly the property it exists to provide.
