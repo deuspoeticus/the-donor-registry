@@ -203,7 +203,7 @@
 
 /*
  * The slogan goes first when the row runs out of width. It is stated at full size in the
- * masthead two hundred pixels below; the addresses are not stated anywhere else.
+ * cover two hundred pixels below; the addresses are not stated anywhere else.
  */
 @media (max-width: 92rem) {
   .nav__slogan {

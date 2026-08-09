@@ -230,8 +230,34 @@
    * into its channels — a fraction of an em, so it reads as pressure on the letters
    * rather than as damage to them.
    */
-  .proposition:hover,
-  .masthead__slogan:hover {
+  /*
+   * The primary control inverts like everything else, which for a solid-ink button means
+   * going to paper. The red offset snaps out from under it as it does.
+   */
+  .button--cta:hover {
+    background: var(--paper);
+    color: var(--ink);
+    border-color: var(--ink);
+    box-shadow: 4px 4px 0 var(--red);
+  }
+
+  .button--cta:hover .button__sigil {
+    color: var(--red-ink);
+  }
+
+  .button--cta-2:hover {
+    background: var(--ink);
+    color: var(--paper);
+    box-shadow: 4px 4px 0 var(--red);
+    --sigil-cyan: var(--cyan-lit);
+  }
+
+  .button--cta-2:hover .button__sigil {
+    color: var(--red-lit);
+  }
+
+  .cover__proposition:hover,
+  .cover__slogan:hover {
     text-shadow: 0 0 var(--glow) rgba(11, 11, 13, 0.3),
       0.035em 0 rgba(255, 42, 23, 0.75), -0.035em 0 rgba(0, 114, 101, 0.7);
     transition: text-shadow 180ms linear;

@@ -342,6 +342,59 @@ The head carries a status strip — consent, pool, writes, self, channel, sector
 
 Statistics come early and often, and this is a structural rule rather than a preference: the census (`01`) is drawn before consent is asked for, the model and the forge and the catalogue are readable without being measured, and every sector opens on shape and closes on detail. The forty-row table is the evidence, not the finding, so it goes last and behind a disclosure.
 
+### 6i. Sector 00 — the cover
+
+The one place the ledger's even rhythm is broken on purpose, and the only sector that fills
+the viewport (`100svh` minus the fixed head, so the fold lands where the screen ends rather
+than a head-height past it).
+
+It carried six stacked text blocks and three of them were at display scale — the registry
+name, the slogan and the proposition all at once, so nothing was the hero and the eye had no
+entry point. Under those sat a three-clause standfirst restating the proposition in more
+words, and a note about how many sectors the page has, occupying the most valuable space on
+the site. There was no call to action at all.
+
+**One winner, three ranks, two rails.**
+
+| rank | element | treatment |
+|---|---|---|
+| 1 | `WEAR ME.` | `--t-cover`, red, bitmap. The only line on the screen in the imperative. |
+| 2 | the proposition | what the piece is. Bitmap, ~2.4rem. |
+| 3 | one sentence | what actually happens. Reading size. |
+| 3 | the two doors | same rank as the sentence, because they answer it. |
+| — | credit / figures / model address | pinned to a top and a bottom rail, out of the way. |
+
+Three zones pushed apart by `space-between`: the zones *are* the hierarchy. Everything that
+is not the argument gets pinned to an edge and the middle is left to the four things that
+are. The registry still names itself, in small caps above the hero, inside the same `h1`.
+
+**The CTA is navigation, not consent.** `Measure my browser` scrolls to sector 03, where
+nothing is preselected and the visitor still has to choose; `Browse the faces` scrolls to 09.
+The promise under the row — *Nothing is read until you choose* — is on the page rather than
+only in a `title`, because it is the reason the primary control is allowed to be as loud as
+it is. This is also why the pair may be a primary and a secondary at all: §6f's symmetry
+rules bind controls that transmit or take something, and these only scroll. The moment a
+control does either, it becomes a rite (§6h) and the symmetry returns.
+
+The primary is solid ink rather than red. Red means exposure and irreversibility; a button
+that moves you down the page is neither, and ink is simply the loudest thing the palette has
+that is not making a claim.
+
+**The three figures carry no definitions**, unlike the census tiles in sector 01. Different
+job: a tile on a census must state what it counts, because a number with no stated claim is
+the standard way of implying more than you measured; these are proof that something real is
+behind the page, read in one second on the way past, and the claims are two hundred pixels
+below where a number that needs qualifying can be qualified.
+
+**The hero is sized by the smaller axis** — `clamp(2.75rem, min(14.5vw, 21vh), 12rem)`. A
+cover hero that watches only width overflows every laptop ever made, because laptops are wide
+and short: the first build asked for 768px of content inside the 619px a 1280×720 screen has,
+and the foot rail fell off the bottom. Two height bands trim the ranks below the hero as well,
+because shrinking only the hero would close the gap between rank 1 and rank 2 and cost the
+hierarchy the thing it exists for. Below 40rem of height the cover stops claiming to be one
+and becomes an ordinary scrolling sector — a cover that cannot fit should say so rather than
+crop its own last zone.
+
 ### 6h. The two rites
 
 Two things happen on this page that are not readings. A signature is **given**, and a face is **taken**. Neither can be undone by looking at it again, and both used to be a button at the end of a paragraph, indistinguishable from the hundred readings around them. A page that reports a hundred numbers in the same voice it uses to hand away somebody's face has filed the two as the same kind of event, and they are not: one is a measurement and the other is an act.

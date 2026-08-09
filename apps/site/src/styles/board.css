@@ -165,63 +165,340 @@
   border-left-color: var(--cyan-ink);
 }
 
-/* ---------------------------------------------------------------- the masthead */
+/* ---------------------------------------------------------------- the cover
+ *
+ * Sector 00, and the one place the ledger's even rhythm is broken on purpose.
+ *
+ * It carries six things and it used to carry six things, but it used to carry three of
+ * them at display scale — the registry name, the slogan and the proposition — so nothing
+ * was the hero and the eye had no entry point. It also carried a three-clause standfirst
+ * that restated the proposition in more words, and a line about how many sectors the page
+ * has, in the most valuable space on the site.
+ *
+ * The hierarchy now has one winner and three ranks below it:
+ *
+ *   1  WEAR ME.        the hero. --t-cover, red, bitmap. The only line in the imperative.
+ *   2  the proposition  what the piece is. --t-hero, ink.
+ *   3  one sentence     what actually happens. Reading size.
+ *   3  the two doors    the same rank as the sentence, because they answer it.
+ *   4  figures, credit, the model address. Rails, top and bottom, out of the way.
+ *
+ * Three zones — a top rail, a centre mass and a foot rail — pushed apart by
+ * `space-between`. The zones are the hierarchy: everything that is not the argument gets
+ * pinned to an edge, and the middle is left to the four things that are.
+ */
+
+.sector--cover {
+  /*
+   * `svh` rather than `vh`, with a fallback: on a phone `100vh` is the height the
+   * viewport has when the browser chrome is *hidden*, so a `vh` cover is taller than the
+   * screen and the fold is a promise the page cannot keep. Minus the fixed head, so the
+   * fold lands at the bottom of what is actually visible.
+   */
+  min-height: calc(100vh - var(--head-h));
+  min-height: calc(100svh - var(--head-h));
+  display: flex;
+  flex-direction: column;
+  /* Tighter than an ordinary sector: on a cover the padding is competing with the
+     content for a fixed budget, and the content wins. */
+  padding-top: clamp(1.25rem, 2.5vw, 2rem);
+  padding-bottom: clamp(1.25rem, 2.5vw, 2rem);
+}
+
+/* The ledger head still runs, because sector 00 is a sector — but it sits closer to the
+   content here, where every pixel above the fold is spoken for. */
+.sector--cover .sector__head {
+  margin-bottom: clamp(0.9rem, 2vh, 1.25rem);
+}
+
+.sector--cover .sector__inner,
+.sector--cover .sector__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
 
 /*
- * THE DONOR REGISTRY, and Wear Me under it.
+ * `width: 100%` is load-bearing, and the reason is a flexbox rule that is easy to walk
+ * into: base `.sector__inner` carries `margin: 0 auto` to centre itself inside `--frame`,
+ * and **auto side margins on a flex item disable `align-items: stretch`**. Making the
+ * cover's inner a flex item therefore stopped it filling the row and left it
+ * shrink-to-fit around its widest child — 880px against the 1333px every other sector
+ * gets, pushed off-centre because the auto margins then centred the shrunken box.
  *
- * Two names doing two jobs. The first is what the institution is called and it is
- * set as an institution sets its name: full width, bitmap serif, upper case. The
- * second is what the institution actually says to you, and it is set as an
- * instruction, in red, because it is one.
+ * With an explicit width it fills the row first, `max-width` still caps it at `--frame`,
+ * and the auto margins go back to doing only what they were for.
  */
-.masthead__title {
-  font-size: var(--t-mega);
-  line-height: 0.84;
-  margin-bottom: 0.1em;
+.sector--cover .sector__inner {
+  width: 100%;
 }
 
-.masthead__slogan {
-  display: block;
-  font-family: var(--font-display);
-  font-size: clamp(2rem, 6.5vw, 5rem);
-  line-height: 0.9;
-  letter-spacing: 0;
-  color: var(--red-ink);
-  -webkit-font-smoothing: none;
-  margin-bottom: 0.35em;
-}
-
-.runhead {
+.cover {
+  flex: 1;
   display: flex;
-  align-items: baseline;
-  gap: 0.6em;
-  flex-wrap: wrap;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: clamp(1.25rem, 3vh, 2.5rem);
+}
+
+/* ---- the top rail ---- */
+
+/*
+ * The credit. An institution says who is publishing before it says anything else, and
+ * then gets out of the way — so this is the smallest type on the screen and the first
+ * thing in the document.
+ */
+.cover__credit {
   font-family: var(--font-sans);
-  font-size: var(--t-label);
+  font-size: var(--t-micro);
   font-weight: 600;
   font-stretch: 82%;
   letter-spacing: var(--track-label);
   text-transform: uppercase;
   color: var(--ink-3);
-  margin-bottom: 1.25rem;
-  padding-bottom: 0.6rem;
-  border-bottom: 1px solid var(--rule);
-  max-width: none;
+  /* Wide, so it takes one or two lines rather than three. It is a credit, not a
+     paragraph. */
+  max-width: 110ch;
+  line-height: 1.45;
+}
+
+/* ---- the centre mass ---- */
+
+.cover__mid {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: clamp(0.7rem, 1.6vh, 1.2rem);
+}
+
+.cover__title {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  font-size: inherit;
+  text-transform: none;
+  line-height: 1;
+  margin: 0;
+}
+
+/* The institution, naming itself. Small caps in the grotesque, so the hero under it is
+   unmistakably the louder of the two. */
+.cover__registry {
+  font-family: var(--font-sans);
+  font-size: var(--t-label);
+  font-weight: 700;
+  font-stretch: 82%;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--ink-2);
+  margin-bottom: 0.5em;
+}
+
+/* The hero. Nothing else on the site is allowed at this size. */
+.cover__slogan {
+  font-family: var(--font-display);
+  font-size: var(--t-cover);
+  line-height: 0.82;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: var(--red-ink);
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+  text-rendering: geometricPrecision;
 }
 
 /*
- * The proposition: the shortest true statement of the piece, and the only element on
- * the page whose chromatic split is not driven by a measurement — because this
- * sentence is what the measurement is about.
+ * The proposition: the shortest true statement of the piece, and the only element on the
+ * page whose chromatic split is not driven by a measurement — because this sentence is
+ * what the measurement is about.
  */
-.proposition {
-  font-size: var(--t-hero);
-  line-height: 1.04;
+/*
+ * Rank 2. Deliberately not `--t-hero`: at that size over 24ch it ran to three lines and
+ * came within a whisker of the hero, which left the screen with two things shouting and
+ * therefore no hierarchy. Smaller and wider is both a clearer second rank and 90px of
+ * height back.
+ */
+.cover__proposition {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 3.1vw, 2.4rem);
+  line-height: 1.06;
+  letter-spacing: 0;
   color: var(--ink);
-  max-width: 26ch;
+  max-width: 34ch;
   text-wrap: balance;
-  margin-bottom: 1.25rem;
+  -webkit-font-smoothing: none;
+}
+
+/* Rank 3: what actually happens, in one sentence, at reading size and no larger. */
+.cover__line {
+  font-size: var(--t-md);
+  line-height: 1.45;
+  letter-spacing: var(--track-body);
+  color: var(--ink-2);
+  max-width: 52ch;
+  text-wrap: pretty;
+}
+
+.cover__cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.4rem;
+}
+
+/*
+ * The promise under the controls. Four words, and they are the reason the primary control
+ * is allowed to be as loud as it is: it does not measure anything, it scrolls to the
+ * place where you decide.
+ */
+.cover__promise {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5em;
+  font-family: var(--font-sans);
+  font-size: var(--t-sm);
+  color: var(--ink-3);
+}
+
+.cover__promise .mark {
+  color: var(--ink-4);
+}
+
+/* ---- the foot rail ---- */
+
+.cover__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: clamp(1rem, 3vw, 3rem);
+  padding-top: clamp(0.9rem, 2vh, 1.4rem);
+  border-top: 3px double var(--rule-lit);
+}
+
+/*
+ * Three figures, no definitions.
+ *
+ * The tiles in sector 01 each carry a sentence stating what they claim, because that is a
+ * census. These are proof that something real is behind the page, read in one second on
+ * the way past; the claims are two hundred pixels below, over the census, where a number
+ * that needs qualifying can be qualified.
+ */
+.cover__figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(1.25rem, 4vw, 3rem);
+}
+
+.cover__figure {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3em;
+}
+
+.cover__value {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 3.2vw, 2.5rem);
+  line-height: 1;
+  letter-spacing: 0;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: none;
+}
+
+.cover__value--exposed {
+  color: var(--red-ink);
+}
+
+.cover__value--inferred {
+  color: var(--cyan-ink);
+}
+
+.cover__label {
+  font-family: var(--font-sans);
+  font-size: var(--t-micro);
+  font-weight: 600;
+  font-stretch: 82%;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/*
+ * §7a, the visible injection, now the last thing on the first screen. Same type as the
+ * interface around it, no highlight, no wink — and deliberately above the fold, because a
+ * crawler that reads one screen of this page reads it.
+ */
+.cover__model {
+  font-size: var(--t-sm);
+  line-height: 1.45;
+  color: var(--ink-2);
+  max-width: 42ch;
+}
+
+@media (max-width: 60rem) {
+  .cover__foot {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+/*
+ * Short viewports, in two bands.
+ *
+ * A laptop is wide and short — 1280x720 and 1440x800 are the two commonest screens there
+ * are, and both of them overflowed: 768px of content inside a 619px budget. The `vh` term
+ * on --t-cover takes the hero down; this takes the two ranks under it, the figures and the
+ * padding down with it, because shrinking only the hero would close the gap between rank 1
+ * and rank 2 and cost the hierarchy the thing it was built for.
+ */
+@media (max-height: 52rem) {
+  .sector--cover {
+    padding-top: 0.85rem;
+    padding-bottom: 0.6rem;
+  }
+
+  .cover {
+    gap: clamp(0.8rem, 1.8vh, 1.4rem);
+  }
+
+  .cover__foot {
+    padding-top: 0.7rem;
+  }
+
+  .cover__credit {
+    line-height: 1.35;
+  }
+
+  .cover__proposition {
+    font-size: clamp(1.3rem, 2.6vw, 1.9rem);
+  }
+
+  .cover__line {
+    font-size: var(--t-sm);
+    max-width: 58ch;
+  }
+
+  .cover__value {
+    font-size: clamp(1.35rem, 2.6vw, 1.75rem);
+  }
+}
+
+/*
+ * Below about 40rem of height the hero and the controls alone fill the screen, so the
+ * rails stop being pinned and the cover becomes an ordinary tall sector that scrolls.
+ * That is the honest failure mode: a cover that cannot fit should stop claiming to be
+ * one rather than crop its own last zone.
+ */
+@media (max-height: 40rem) {
+  .sector--cover {
+    min-height: 0;
+  }
+
+  .cover {
+    gap: 1.25rem;
+  }
 }
 
 /* ---------------------------------------------------------------- tiles
