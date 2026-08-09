@@ -74,6 +74,47 @@ button:disabled,
   font-size: 1.25em;
 }
 
+/*
+ * The two calls to action on the cover.
+ *
+ * A primary and a secondary, which is an asymmetry the consent gate is not allowed —
+ * and the difference is the whole justification: these only *scroll*. The moment a
+ * control transmits or takes something it becomes a rite, and §6f's symmetry rules
+ * apply again. Nothing irreversible is reachable from either of these.
+ *
+ * The primary is solid ink rather than red. Red is reserved for exposure and
+ * irreversibility, and a button that moves you down the page is neither; ink is simply
+ * the loudest thing the palette has that is not making a claim.
+ */
+.button--cta,
+.button--cta-2 {
+  font-size: var(--t-sm);
+  padding: 1em 1.6em;
+  font-stretch: 92%;
+  letter-spacing: 0.05em;
+}
+
+.button--cta {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+  --sigil-cyan: var(--cyan-lit);
+}
+
+.button--cta .button__sigil {
+  color: var(--red-lit);
+}
+
+.button--cta-2 {
+  background: var(--paper);
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+.button--cta-2 .button__sigil {
+  color: var(--ink-2);
+}
+
 /* ---------------------------------------------------------------- the tiers */
 
 .tiers {

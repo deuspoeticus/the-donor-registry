@@ -210,6 +210,17 @@
   --font-mark: 'Noto Sans Symbols 2', 'Segoe UI Symbol', 'Apple Symbols', sans-serif;
 
   /* the scale */
+  /*
+   * The cover's hero, and the only step above --t-mega. `WEAR ME.` is eight characters
+   * of a bitmap face and it is the single largest thing on the site, because it is the
+   * only line on the cover in the imperative. Nothing else may use this.
+   *
+   * Sized by the *smaller* axis. A hero that watches only width overflows every laptop
+   * ever made, because laptops are wide and short: at 14.5vw a 1280x720 screen asks for
+   * 186px of hero inside a 619px budget and the foot rail falls off the bottom. The `vh`
+   * term is what makes a full-height cover survive a 720px screen.
+   */
+  --t-cover: clamp(2.75rem, min(14.5vw, 21vh), 12rem);
   --t-mega: clamp(3.25rem, 11vw, 8.5rem);
   --t-hero: clamp(1.9rem, 5vw, 3.5rem);
   --t-fig: clamp(2.25rem, 5.5vw, 4.5rem);

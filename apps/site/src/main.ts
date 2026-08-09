@@ -32,6 +32,12 @@ import { estimateAutomation, type AutomationEstimate } from './classifier.js';
 import {
   ADDRESSING_NOTE,
   COLOPHON_CREDIT,
+  COVER_LINE,
+  CTA_BROWSE,
+  CTA_BROWSE_TITLE,
+  CTA_MEASURE,
+  CTA_MEASURE_TITLE,
+  CTA_PROMISE,
   CURSOR_NOTE,
   FORGE_DISTRIBUTION_NOTE,
   FORGE_NOTE,
@@ -48,7 +54,6 @@ import {
   RUNNING_HEAD,
   SIGIL_NOTE,
   SLOGAN,
-  STANDFIRST,
   SYNTHETIC_DISCLOSURE,
   TYPE_NOTE,
   WORN_NOW,
@@ -430,7 +435,7 @@ function render(options: RenderOptions = {}): void {
   clear(app);
 
   const board = createBoard();
-  app.appendChild(masthead(board));
+  app.appendChild(cover(board));
 
   /*
    * If a script emitted by this piece is patching this page, say so before any
@@ -594,30 +599,130 @@ function reportState(): Report {
 // ---------------------------------------------------------------- sector 00
 
 /**
- * The masthead.
+ * The cover (sector 00, §6i).
  *
- * Two names, doing two jobs, set in two registers. `THE DONOR REGISTRY` is what the
- * thing is called and it is set the way an institution sets its name: full width,
- * bitmap serif, upper case. `Wear Me.` is what the institution says to you, and it is
- * set as an instruction — in red, underneath, because it is one.
+ * One hero, one sentence, two doors, three figures, and two rails. It used to be six
+ * stacked text blocks with three of them at display scale — the registry name, the
+ * slogan and the proposition all shouting at once, so nothing was the hero and the eye
+ * had no entry point. Under those sat a three-clause standfirst that restated the
+ * proposition in more words, and a note about how many sectors the page has.
  *
- * No figures. They used to be here, in a row above a run-on line of statistics, and
- * they now open sector 01 where the pool they are about is also described — a number
- * in a masthead is a boast, and the same number over the census is a claim.
+ * `WEAR ME.` is the hero because it is the only line on this screen in the imperative.
+ * Everything that is not the argument is pinned to a rail — the credit at the top, the
+ * figures and the model address at the bottom — and the middle is left to the four
+ * things that are: the name, the hero, what the piece is, and what to do about it.
+ *
+ * See styles/board.css for the three-zone layout and the ranks.
  */
-function masthead(board: Board): HTMLElement {
+function cover(board: Board): HTMLElement {
+  const { stats } = state.pool;
+
+  /*
+   * The two doors, and neither of them is a rite.
+   *
+   * Both only scroll. The primary one says "Measure my browser" and takes you to sector
+   * 03, where nothing is preselected and you still have to choose — a call to action on a
+   * page about consent does not get to be the thing that grants it, and the promise under
+   * the row says so in four words rather than leaving it to a title attribute.
+   *
+   * They are styled as a primary and a secondary rather than as the two identical choices
+   * the consent gate uses. That asymmetry is allowed here precisely because nothing
+   * irreversible is on offer: this is navigation. The moment a control transmits or takes
+   * something, it becomes a rite and the symmetry rules in §6f apply again.
+   */
+  const cta = h(
+    'div',
+    { class: 'cover__cta' },
+    h(
+      'button',
+      {
+        type: 'button',
+        class: 'button--cta',
+        title: CTA_MEASURE_TITLE,
+        onclick: () => jump('consent'),
+      },
+      sigil('blood', { px: 22, className: 'button__sigil' }),
+      CTA_MEASURE,
+    ),
+    h(
+      'button',
+      {
+        type: 'button',
+        class: 'button--cta-2',
+        title: CTA_BROWSE_TITLE,
+        onclick: () => jump('catalogue'),
+      },
+      sigil('phial', { px: 22, className: 'button__sigil' }),
+      CTA_BROWSE,
+    ),
+  );
+
+  /*
+   * Three figures, and no definitions.
+   *
+   * The tiles in sector 01 each carry a sentence stating what they claim, because that is
+   * a census and a number on a dashboard with no statement of what it counts is the
+   * standard way of implying more than you measured. Here the job is different: these are
+   * proof that something real is behind the page, read in one second on the way past. The
+   * claims are two hundred pixels below, over the census, where they belong.
+   */
+  const figures = h('div', { class: 'cover__figures' });
+  const figure = (value: string, label: string, register: '' | 'exposed' | 'inferred') => {
+    append(figures, [
+      h(
+        'div',
+        { class: 'cover__figure' },
+        h('span', {
+          class: register ? `cover__value cover__value--${register}` : 'cover__value',
+          text: value,
+        }),
+        h('span', { class: 'cover__label', text: label }),
+      ),
+    ]);
+  };
+  figure(int(stats.size), 'faces in the pool', '');
+  figure(int(stats.totalWears), 'times worn', 'exposed');
+  figure(bits(stats.bitsDestroyed), 'bits destroyed', 'inferred');
+
   return board.sector(
     'subject',
-    { meta: `${SECTOR_COUNT} addresses · nothing read` },
-    h('p', { class: 'runhead' }, h('span', { text: RUNNING_HEAD })),
-    h('h1', { class: 'masthead__title', text: REGISTRY }),
-    h('strong', { class: 'masthead__slogan', text: SLOGAN }),
-    h('p', { class: 'proposition', text: PROPOSITION }),
-    h('p', { class: 'caveat', text: STANDFIRST }),
-    h('p', {
-      class: 'gloss',
-      text: `${SECTOR_COUNT} sectors, one scroll. Sector 01 is the pool every number here is measured against; sector 03 is where you decide what this page may read from you. Nothing has been read yet.`,
-    }),
+    { cover: true, meta: 'nothing has been read' },
+    h(
+      'div',
+      { class: 'cover' },
+      // The credit, pinned to the top rail: an institution says who is publishing it
+      // before it says anything else, and then gets out of the way.
+      h('p', { class: 'cover__credit', text: RUNNING_HEAD }),
+
+      h(
+        'div',
+        { class: 'cover__mid' },
+        /*
+         * One h1 holding both names, at two scales. The registry names itself, then tells
+         * you what to do — and `Wear Me.` is the hero because it is the only line on this
+         * screen in the imperative.
+         */
+        h(
+          'h1',
+          { class: 'cover__title' },
+          h('span', { class: 'cover__registry', text: REGISTRY }),
+          h('span', { class: 'cover__slogan', text: SLOGAN }),
+        ),
+        h('p', { class: 'cover__proposition', text: PROPOSITION }),
+        h('p', { class: 'cover__line', text: COVER_LINE }),
+        cta,
+        h('p', { class: 'cover__promise' }, decoration('withheld'), h('span', { text: CTA_PROMISE })),
+      ),
+
+      h(
+        'div',
+        { class: 'cover__foot' },
+        figures,
+        // §7a. Same type as everything around it. No highlight, no wink — and first,
+        // now, for anything reading the page from the top.
+        h('p', { class: 'cover__model', text: MODEL_ADDRESS }),
+      ),
+    ),
   );
 }
 

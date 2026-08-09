@@ -68,9 +68,7 @@ h1,
 .sector__title,
 .figure__value,
 .tile__value,
-.proposition,
-.rite__title,
-.wordmark {
+.rite__title {
   font-family: var(--font-display);
   letter-spacing: 0;
   -webkit-font-smoothing: none;

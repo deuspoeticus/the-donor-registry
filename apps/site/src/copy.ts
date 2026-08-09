@@ -36,9 +36,42 @@ export const FULL_TITLE = `THE DONOR REGISTRY: Wear Me.`;
  */
 export const PROPOSITION = `Your browser has a face. This work takes it, and gives it away.`;
 
-export const RUNNING_HEAD = `Web Residencies No. 22 — Ignore All Previous Instructions`;
+export const RUNNING_HEAD = `Akademie Schloss Solitude Web Residencies Call No. 22 »Ignore All Previous Instructions« Curated by !Mediengruppe Bitnik`;
 
-export const STANDFIRST = `Every browser leaks a near-unique signature. This page measures yours in front of you, tells you what the measurement says, and offers to put it into a public pool that anyone can wear.`;
+/**
+ * Sector 00 (§6i).
+ *
+ * The cover carries one hero, one sentence, one pair of controls and three figures, and
+ * that is the whole of it. What it used to carry was six stacked blocks — a credit line,
+ * the registry name, the slogan, the proposition, a three-clause standfirst that restated
+ * the proposition in more words, and a note about how many sectors the page has. Three of
+ * those were at display scale, so nothing was the hero, and the last was wayfinding
+ * trivia in the most valuable space on the site.
+ *
+ * `WEAR ME.` is the hero because it is the only line here in the imperative. The registry
+ * names itself above it in small caps; the proposition explains it underneath; this
+ * sentence says what actually happens. Then the two doors.
+ */
+export const COVER_LINE = `It reads your browser in front of you, then offers what it finds to anyone who wants to wear it.`;
+
+/**
+ * The two calls to action.
+ *
+ * Neither of them does anything except scroll. That matters enough to be stated on the
+ * page rather than only in a comment: `Measure my browser` is a button that takes you to
+ * sector 03, where nothing is preselected and you still have to choose. A CTA on a page
+ * about consent does not get to be the thing that grants it.
+ */
+export const CTA_MEASURE = `Measure my browser`;
+
+export const CTA_BROWSE = `Browse the faces`;
+
+export const CTA_PROMISE = `Nothing is read until you choose.`;
+
+/** The `title` on the primary control, for anybody who checks before clicking. */
+export const CTA_MEASURE_TITLE = `Goes to sector 03, where you choose what this page may read. Pressing this measures nothing.`;
+
+export const CTA_BROWSE_TITLE = `Goes to sector 09, the catalogue of donated signatures. Reads nothing from this browser.`;
 
 /**
  * The census (sector 01).

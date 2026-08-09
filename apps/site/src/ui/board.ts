@@ -27,6 +27,15 @@ export interface SectorOptions {
   lede?: string;
   /** A single reading, right-aligned in the head. The number worth stating first. */
   meta?: string;
+  /**
+   * Fill the viewport.
+   *
+   * Sector 00 only, and it is the one place the ledger's even rhythm is broken on
+   * purpose: a cover needs the whole frame or it is just a tall section. The height is
+   * `100svh` minus the fixed head, so the fold lands exactly at the bottom of what is
+   * visible rather than a head-height past it.
+   */
+  cover?: boolean;
 }
 
 export interface Board {
@@ -125,7 +134,11 @@ export function createBoard(): Board {
       built.push(spec);
       return h(
         'section',
-        { class: 'sector', id: spec.id, 'aria-labelledby': `${spec.id}-name` },
+        {
+          class: options.cover ? 'sector sector--cover' : 'sector',
+          id: spec.id,
+          'aria-labelledby': `${spec.id}-name`,
+        },
         h(
           'div',
           { class: 'sector__inner' },
