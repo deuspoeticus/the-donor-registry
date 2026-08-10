@@ -429,17 +429,32 @@ export function recordForge(attempts: number, discarded: number): ForgeTotals {
 
 export const apiBase = API;
 
+/** The surface modes `data/scripts/<id>.user.js` was pre-generated under (§7, `packages/core/scripts/write-scripts.ts`). */
+const isDefaultWear = (options: { canvasMode: string; audioMode: string; hideOverrides: boolean }): boolean =>
+  options.canvasMode === 'converge' && options.audioMode === 'converge' && !options.hideOverrides;
+
 /**
- * Where the pool serves this identity's script.
+ * Where this identity's script is: a real URL ending in `.user.js`, because
+ * that is what a userscript manager watches for. Navigating here with a
+ * manager installed produces its install dialogue; navigating here without
+ * one shows the source.
  *
- * A real URL ending in `.user.js`, because that is what a userscript manager
- * watches for. Navigating here with a manager installed produces its install
- * dialogue; navigating here without one shows the source.
+ * Under the default surface modes — which is what the catalogue offers as
+ * "Take this face" — this is a static file, built once for every entry
+ * (`packages/core/scripts/write-scripts.ts`) and served the same way
+ * `pool.json` is: no request to the pool service sits on the path between a
+ * click and a working userscript, and the link keeps working even when the
+ * service does not. Anything the visitor has toggled away from the default
+ * still needs the service, because a perturbed or concealment-patched script
+ * is a variant nothing pre-generated.
  */
 export function scriptUrl(
   id: string,
   options: { canvasMode: string; audioMode: string; hideOverrides: boolean },
 ): string {
+  if (isDefaultWear(options)) {
+    return `${import.meta.env.BASE_URL}scripts/${id}.user.js`;
+  }
   const query = new URLSearchParams({
     canvas: options.canvasMode,
     audio: options.audioMode,

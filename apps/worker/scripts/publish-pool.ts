@@ -5,10 +5,23 @@
  *   npm run publish:pool --workspace @wearme/worker -- --remote
  *
  * The service has no list route. The catalogue a visitor reads is this file,
- * `data/pool.json`, written here and served as a static asset — which is why
- * reads cost nothing, and why a donation appears in the catalogue on the next
- * build rather than the next second. That is the weekly cadence the deck
- * commits to in §16, doing the work rather than describing it.
+ * `data/pool.json`, written here and shipped as a build artifact — which is
+ * why reads cost nothing, and why a donation appears in the catalogue on the
+ * next build rather than the next second.
+ *
+ * This file is written to the working tree and read straight back into the
+ * site build in the same CI job (`.github/workflows/publish-pool.yml`), and it
+ * is **never committed**. A registry has a day book and an engrossed
+ * register — entries taken continuously, the register printed periodically —
+ * and `git commit` is the wrong verb for "printed": revocation deletes a row
+ * from D1 immediately, but a row committed to a public git history is
+ * recoverable from that history forever, by anyone who has ever cloned or
+ * forked the repo, independent of what the deployed site shows. The lawful
+ * basis for holding a fingerprint at all is explicit consent with a plain
+ * revocation path (§8); a `git log` of every past snapshot would quietly
+ * undo that the moment it held one real donation. Deploying a fresh build on
+ * every run and discarding the working tree afterwards keeps this file
+ * exactly as current as a database query and no more permanent.
  *
  * What this file may contain is the same question `publicEntry` answers in the
  * service, with one difference that matters: a response is seen by its
@@ -27,7 +40,7 @@
  *   whole launch pool shares a creation window — and would leak per entry
  *   provenance through the sequence, which is the same disclosure by a slower
  *   route. In a served response a bad ordering is a mistake; in a published
- *   file it is permanent.
+ *   file it is permanent, which is exactly why this one is never committed.
  */
 
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -35,10 +48,14 @@ import { resolve } from 'node:path';
 
 import { bitsDestroyed } from '@wearme/core/entropy';
 import type { AttrVector, Identity, PoolStats } from '@wearme/core/types';
+import { writeScripts } from '@wearme/core/scripts/write-scripts';
 
 import { query, repoRoot, scopeFromArgv, type Scope } from './d1.js';
 
 const outPath = resolve(repoRoot, 'data/pool.json');
+const scriptsDir = resolve(repoRoot, 'data/scripts');
+/** Where emitted scripts say they came from, in their banner and @namespace. */
+const SITE_URL = process.env.SITE_URL ?? 'https://deuspoeticus.github.io/the-donor-registry/';
 const scope: Scope = scopeFromArgv(process.argv.slice(2));
 
 interface PoolRow {
@@ -147,15 +164,18 @@ assertPublishable(file);
  * Rewrite the file only when the catalogue actually changed.
  *
  * `generatedAt` moves on every run, so comparing bytes would report a
- * difference every week whether or not a single entry had changed, and the
- * weekly job would commit a fresh timestamp over an identical pool. Comparing
- * everything except that field is what makes the timestamp mean something: it
- * becomes the moment the catalogue last *changed*, which is what the site
- * tells visitors it is.
+ * difference on every run whether or not a single entry had changed, and
+ * `generatedAt` would stop meaning anything. Comparing everything except that
+ * field is what makes the timestamp mean something: it becomes the moment the
+ * catalogue last *changed*, which is what the site tells visitors it is —
+ * "register printed …" rather than "job last ran …".
  *
- * It also reduces the workflow's decision to one question. If this script
- * rewrote the file, the working tree is dirty; if it did not, there is nothing
- * to publish. Nothing else needs to be inspected.
+ * This no longer decides whether to publish, now that publishing is "build
+ * and deploy from whatever is on disk" rather than "commit if the working
+ * tree is dirty" (see the file header). It only decides whether `generatedAt`
+ * moves, which matters locally too: running this twice in a row against an
+ * unchanged database should not make the catalogue claim it was just
+ * rebuilt.
  */
 function unchangedFromDisk(next: typeof file): boolean {
   try {
@@ -184,3 +204,18 @@ if (unchangedFromDisk(file)) {
       `  ${(bytes / 1024).toFixed(0)}KB from the ${scope.slice(2)} database`,
   );
 }
+
+/**
+ * The catalogue's install links, pre-generated.
+ *
+ * Run every time rather than only when `pool.json` changed above: a wear count
+ * moving does not change a script (the emitter never reads it), but running
+ * unconditionally is one pass over ~200 entries and means this can never drift
+ * from the id set the catalogue just asserted is current. Content-identical
+ * writes leave the working tree clean, so an unchanged pool still commits
+ * nothing here either.
+ */
+const { written, removed } = writeScripts(entries, scriptsDir, SITE_URL);
+console.log(
+  `wrote ${written} static scripts to ${scriptsDir}${removed > 0 ? ` (${removed} withdrawn, removed)` : ''}`,
+);
