@@ -1,41 +1,51 @@
-# The weekly build (deck §16).
+# The register is printed periodically; the day book is written continuously.
+#
+# Donations and withdrawals happen the instant the pool service (D1) accepts
+# them. `data/pool.json` — and the static `.user.js` next to every entry in
+# `data/scripts/` — are the register: a snapshot regenerated here, built into
+# the site, deployed, and then thrown away with the runner. Nothing this job
+# writes is ever committed. A committed snapshot would make a withdrawn
+# identity recoverable from git history forever, by anyone who has ever cloned
+# or forked this repository, regardless of what the live site shows — which
+# would quietly undo the revocation path that is this project's actual lawful
+# basis for holding a fingerprint at all (README, "Privacy and law"). See the
+# header of `apps/worker/scripts/publish-pool.ts` for the longer version.
+#
+# Because nothing here is committed, this job does not need to decide whether
+# the pool "changed" before building — it always builds from whatever is
+# current in D1 right now and deploys it, the same as `deploy.yml` does for an
+# ordinary code push. Concurrency below keeps that cheap and safe to run
+# often.
 name: Publish the pool
 
-# Donations enter the published catalogue here and nowhere else. The service
-# accepts a donation the moment it is made — the donor's own browser shows it
-# back to them straight away, marked as unpublished — but it is this job that
-# makes the entry visible to anybody else.
-#
-# Withdrawals do not wait for this. Revocation deletes the entry from the pool
-# immediately and the service serves the withdrawn ids so the site can filter
-# the static catalogue against them. This job is what eventually makes that
-# filtering unnecessary.
 on:
   schedule:
-    # Mondays, 09:00 UTC.
-    - cron: '0 9 * * 1'
+    # Every ten minutes. GitHub may delay or coalesce a schedule under load,
+    # especially on the free tier, so treat this as "soon" rather than a
+    # guarantee — the day book (D1, the live service) is authoritative in the
+    # meantime, and the register is simply how far behind it the static site
+    # is allowed to be.
+    - cron: '*/10 * * * *'
   workflow_dispatch:
 
 permissions:
-  # `contents: write` to commit the regenerated catalogue; the other two are
-  # required by the deploy workflow this one calls, and a called workflow
-  # cannot hold permissions its caller has not granted.
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
-# Never runs twice at once. Not cancelled in progress: a half-finished run
-# could have pruned withdrawals without publishing the catalogue that made
-# pruning safe.
+# Never runs twice at once, and a newer run supersedes an older one: an
+# in-progress deploy for a pool that has already moved again is a deploy this
+# job will immediately repeat, so there is nothing lost by cancelling it.
 concurrency:
-  group: publish-pool
-  cancel-in-progress: false
+  group: pages
+  cancel-in-progress: true
 
 jobs:
   publish:
     runs-on: ubuntu-latest
-    outputs:
-      changed: ${{ steps.commit.outputs.changed }}
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -46,42 +56,39 @@ jobs:
           node-version: 20
       - run: npm ci
 
-      # Against the catalogue that is live right now, before it is replaced.
-      # Pruning against the file this job is about to write would drop the
-      # filter for entries the deployed catalogue still lists.
+      # Against the catalogue currently live, fetched from the deployed site —
+      # never against the one this job is about to write. See the file header
+      # of prune-revoked.ts for why disk is not the source of truth here.
       - name: Forget withdrawals the live catalogue no longer needs
         run: npm run prune:revoked --workspace @wearme/worker -- --remote
 
-      # Rewrites data/pool.json only if the pool actually changed, so the
-      # working tree being dirty is the whole publication decision.
-      - name: Regenerate the catalogue
+      # Writes data/pool.json and data/scripts/*.user.js into the working
+      # tree. Neither is committed at any point below — see the file header.
+      - name: Regenerate the catalogue and its install links
         run: npm run publish:pool --workspace @wearme/worker -- --remote
 
-      - name: Commit, if the pool changed
-        id: commit
-        run: |
-          # `git status --porcelain`, not `git diff`: on the first run the
-          # catalogue is untracked, and `git diff` reports an untracked file as
-          # no change — which would leave the first pool ever published sitting
-          # uncommitted, and every run after it reporting nothing to do.
-          if [ -z "$(git status --porcelain -- data/pool.json)" ]; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "The pool is unchanged since the last build. Nothing to publish."
-            exit 0
-          fi
-          count=$(node -p "require('./data/pool.json').count")
-          donated=$(node -p "require('./data/pool.json').stats.donatedCount")
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/pool.json
-          git commit -m "Publish the pool: ${count} entries, ${donated} donated"
-          git push
-          echo "changed=true" >> "$GITHUB_OUTPUT"
+      - run: npm run typecheck
 
-  # Only when there is something new to serve. An unchanged pool does not need
-  # redeploying, and a deploy that changes nothing is noise in the record of a
-  # piece whose build history is part of what it publishes.
-  deploy:
-    needs: publish
-    if: needs.publish.outputs.changed == 'true'
-    uses: ./.github/workflows/deploy.yml
+      # The site falls back to bootstrap.json when VITE_API_URL is unset,
+      # which is correct for a developer and silently wrong for a deployment.
+      - name: Require the pool service URL
+        run: |
+          if [ -z "${{ secrets.VITE_API_URL }}" ]; then
+            echo "VITE_API_URL is not set. Add it as a repository secret; without"
+            echo "it the built site points at localhost and no visitor can donate,"
+            echo "wear or withdraw."
+            exit 1
+          fi
+
+      # Reads the data/pool.json and data/scripts/ just written above — Vite's
+      # publicDir is data/, so the freshly generated files ship as they are,
+      # uncommitted, and are gone with this runner once the job ends.
+      - run: npm run build --workspace @wearme/site
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/site/dist
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

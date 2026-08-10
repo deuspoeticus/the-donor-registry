@@ -1,14 +1,19 @@
 name: Deploy to GitHub Pages
 
+# For an ordinary code push. `publish-pool.yml` (the scheduled catalogue
+# refresh) is a separate, self-contained workflow rather than a caller of this
+# one: it needs the freshly generated, uncommitted data/pool.json and
+# data/scripts/ still on disk when it builds, and a workflow_call runs as its
+# own job on its own runner, which would lose exactly that. The two workflows
+# share the "pages" concurrency group below, so they still can't deploy over
+# each other. A push here builds from whatever data files happen to be
+# committed or already on disk — in practice `data/bootstrap.json` and its
+# matching seed scripts, since the live pool's snapshot is never committed —
+# and the next scheduled run catches the deployed site back up to D1.
 on:
   push:
     branches: [main]
   workflow_dispatch:
-  # Called by publish-pool.yml after it commits a new catalogue. A push made
-  # with the default GITHUB_TOKEN does not start other workflows, so that job
-  # cannot rely on its own commit triggering the deploy above — it calls this
-  # one directly instead.
-  workflow_call:
 
 permissions:
   contents: read

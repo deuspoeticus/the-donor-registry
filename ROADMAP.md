@@ -4,7 +4,7 @@ Working notes on what shipped and what's left. `README.md` documents the piece;
 `SPEC.md` is the full build specification. This file tracks execution status
 against both, for future reference.
 
-Last updated: 2026-08-08.
+Last updated: 2026-08-10.
 
 ---
 
@@ -22,9 +22,83 @@ mutual-information matrix beside it, the catalogue, the three rites (donation,
 extraction, withdrawal), and the glitch mapping driving the page's own
 post-processing layer.
 Donation and wearing work but are **local to each visitor's browser** — the
-pool service (`apps/api`) isn't hosted anywhere yet, so the site correctly
-falls back to the seeded `data/bootstrap.json` and says so on screen rather
-than pretending otherwise.
+pool service is not hosted anywhere yet, so the site correctly falls back to
+the seeded `data/bootstrap.json` and says so on screen rather than pretending
+otherwise. `apps/worker` (Hono + Cloudflare D1) is the service that gets
+deployed when this changes; `apps/api` (Fastify + better-sqlite3) is the
+design it was ported from and is kept only for local dev against a real
+SQLite file, not as a second deploy target (§1).
+
+### 2026-08-10 (seventh session) — reads go static, writes stay honest about being writes
+
+A review of the read/write split landed on three fixes, applied in order of
+how much silently wrong they'd otherwise leave in place.
+
+- **The published catalogue stops being committed to git.** `data/pool.json`
+  and the live pool's `data/scripts/*.user.js` were `git add`ed by the weekly
+  build (previous session added the scripts half without noticing it inherited
+  this problem). A row deleted from D1 the moment a revocation token checks
+  out was still sitting in every commit that had ever included it — recoverable
+  forever, by anyone who ever cloned or forked the repo, independent of what
+  the live site showed. That is a direct hole in the one thing the lawful
+  basis for holding a fingerprint depends on (README, "Privacy and law").
+  Fixed by making publishing a deploy rather than a commit: `publish-pool.yml`
+  now regenerates both files from D1 and builds+deploys the site in the same
+  job, and never runs `git add`. `data/pool.json` is untracked and gitignored;
+  `data/bootstrap.json` and its matching seed scripts stay committed, because
+  they are synthetic and have no donor to revoke anything on behalf of.
+  `prune-revoked.ts` used to read "the currently deployed catalogue" off the
+  committed file at checkout — it now fetches the live site's `pool.json`
+  instead, which is what "currently deployed" actually means once the file
+  is not in the repo.
+- **The publish cadence moved from weekly to every ten minutes**, now that a
+  run costs a deploy and not a commit. Framed in the interface's own terms:
+  a registry has a day book (D1, continuous) and an engrossed register
+  (the static site, printed periodically) — ten minutes is how far behind the
+  day book the register is now allowed to get, not a promise GitHub's
+  scheduler is expected to keep exactly.
+- **`POST /identity` runs the forge's coherence gate before storing anything.**
+  It didn't. An open, unauthenticated donation route that accepted any
+  well-formed vector could be filled with incoherent ones inside a day, which
+  would wreck the Chow-Liu fit and therefore every number the page derives
+  from it. `constraints.ts` already discards 99% of the forge's own forgeries
+  for exactly this reason; applying it to a donation is the same argument,
+  not a new one, and it is not a personhood test — a real, unusual browser
+  passes it the same as a coherent forgery does, and automation likelihood
+  still never gates anything (§4a). Fixed in both `apps/worker` and the
+  legacy `apps/api`.
+- **Deliberately not changed:** rate limiting still hashes `CF-Connecting-IP`
+  inside the Worker under a rotating salt rather than moving the check to
+  Cloudflare's edge-level rate-limiting rules. The edge version is a real
+  option — the Worker would never read the header at all — but it is a
+  dashboard/plan-level infrastructure choice outside this repo, and the
+  current implementation already satisfies the spec's actual non-negotiable
+  (§8: "a rotating salted hash with a short TTL, not a retained address").
+  Left as a documented option rather than a silent gap.
+
+### 2026-08-10 (sixth session) — the install link goes static
+
+The catalogue's "Take this face" is the piece's flagship click, and it depended
+on `apps/api`/`apps/worker` — neither hosted yet (§1) — for something that is a
+pure function of an id and its attrs. Fixed by pre-generating it.
+
+- **`packages/core/scripts/write-scripts.ts`**, new: emits one `<id>.user.js`
+  per entry under the default surface modes (converge canvas, converge audio,
+  overrides visible) into `data/scripts/`, and deletes any file left over from
+  an id no longer in the pool. Called from `bootstrap.ts` (the 200 launch
+  entries) and from `apps/worker/scripts/publish-pool.ts` (the live pool, on
+  the same weekly cadence that already governs `data/pool.json` and
+  withdrawal). `data/` is already Vite's `publicDir`, so the files ship as
+  ordinary static assets with no build wiring beyond writing into that folder.
+- **`apps/site/src/pool.ts`'s `scriptUrl`** now returns the static path for the
+  default surface modes and only falls back to the worker's
+  `/identity/:id/script.user.js` for a mode the visitor changed live (perturb,
+  or hidden overrides) — the one variant a static file can't cover.
+- **Net effect:** donation, wearing and revocation still need the worker,
+  because those are writes. Reading the catalogue, reading an entry, trying a
+  script with nothing installed, and now installing one for real, do not — the
+  site works from a plain static host with the worker never deployed, which is
+  the actual state of this repo today.
 
 ### 2026-08-08 (fifth session) — two notations
 
@@ -133,19 +207,33 @@ Net: 10,898px → 7,205px on the measured path, with every section addressable.
 
 ### 1. Infrastructure — unblocks the real (shared) pool
 
-- [ ] **Deploy `apps/api` to Fly.io or Railway** with a persistent volume for
-      `pool.db`. No Dockerfile / `fly.toml` exists yet — write one from
-      scratch.
-- [ ] **Wire `VITE_API_URL` into the Pages deploy workflow** as a repo
-      secret once the API has a stable URL, so production points at the live
-      pool instead of falling back to `bootstrap.json`.
-- [ ] **Add a CORS allowlist** for `https://deuspoeticus.github.io` in the
-      API (currently no deploy config, so this hasn't been configured for a
-      real origin yet).
-- [ ] **Verify/finish rate limiting** on `POST /identity` and
-      `POST /wear/:id`. `apps/api/src/ratelimit.ts` exists — confirm it
-      matches the SPEC §8 design (rotating salted-hash buckets regenerated
-      every 10 minutes, no retained address) and is actually applied.
+The plan below is `apps/api` on a rented box (Fly.io/Railway) — superseded.
+`apps/worker` (Hono + Cloudflare D1) is the actual implementation: same
+routes, same SPEC §8 guarantees, no VM to keep patched, scales to zero, and
+its snapshot-publish step is what the sixth/seventh sessions above depend on
+(a Worker cron or, currently, a scheduled GitHub Action can both drive it —
+either way the point is that reads become a deploy artifact, never a live
+request). What is actually left, against `apps/worker` rather than `apps/api`:
+
+- [ ] **Deploy `apps/worker`.** `wrangler.toml` is filled in (a `database_id`
+      is already committed) but nothing confirms it has ever been applied —
+      `db:migrate`, `db:seed`, `secret:limiter`, `deploy`, in that order.
+- [ ] **Wire `VITE_API_URL` and `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID`**
+      into repo secrets once the Worker has a stable URL — `deploy.yml`
+      already reads `VITE_API_URL`, and `publish-pool.yml` (seventh session)
+      already reads the Cloudflare pair; both currently no-op or fail without
+      them, which is the intended fail-loud behaviour rather than a silent
+      fallback to `bootstrap.json` in production.
+- [x] **CORS allowlist** — `wrangler.toml`'s `ALLOWED_ORIGINS` is already set
+      to `https://deuspoeticus.github.io`, applied in `apps/worker/src/index.ts`.
+- [x] **Rate limiting** — `apps/worker/src/ratelimit.ts` matches SPEC §8:
+      rotating salted-hash buckets, one D1 table, no retained address, and is
+      applied to every write route. Still open: moving the check to
+      Cloudflare's edge-level rate-limiting rules instead of inside the
+      Worker, which would mean the Worker never reads `CF-Connecting-IP` at
+      all — a real improvement, but a dashboard/plan-level choice rather
+      than a code change, and deliberately not done in the seventh session
+      (see that entry above).
 - [x] **Code-split the site bundle.** Resolved by deletion rather than by
       splitting. It was 577KB in one chunk, almost all of it Three.js; Three.js
       left with the stele field (SPEC §6a) and the bundle is now ~125KB with no
@@ -246,7 +334,8 @@ scaffolding:
 
 ## Notes on sequencing
 
-Hosting `apps/api` (§1, item 1) unblocks the largest share of this list —
-donation/wearing going pool-wide, the userscript emitter actually serving
-scripts, the report-back loop, and both verification items in §3. Everything
-else is independent and can proceed in parallel.
+Deploying `apps/worker` (§1, item 1) unblocks the largest share of this list —
+donation/wearing going pool-wide, the catalogue and its install links
+publishing for real (sixth/seventh sessions above), the report-back loop, and
+both verification items in §3. Everything else is independent and can proceed
+in parallel.

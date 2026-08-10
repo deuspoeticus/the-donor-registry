@@ -20,12 +20,16 @@ import { rngFromHex } from '../src/prng.js';
 import { sha256 } from '../src/hash.js';
 import type { AttrVector } from '../src/types.js';
 import { applyTail, sampleFromPrior } from './prior.js';
+import { writeScripts } from './write-scripts.js';
 
 const TARGET = Number(process.env.BOOTSTRAP_COUNT ?? 200);
 const SEED = process.env.BOOTSTRAP_SEED ?? 'wear-me/bootstrap/v1';
+/** Where emitted scripts say they came from, in their banner and @namespace. */
+const SITE_URL = process.env.SITE_URL ?? 'https://deuspoeticus.github.io/the-donor-registry/';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const outPath = resolve(here, '../../../data/bootstrap.json');
+const scriptsDir = resolve(here, '../../../data/scripts');
 
 /** Every entry carries the full key set. A missing key and a null value are different claims. */
 function normalise(attrs: AttrVector): AttrVector {
@@ -102,9 +106,15 @@ const payload = {
 mkdirSync(dirname(outPath), { recursive: true });
 writeFileSync(outPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
 
+// The launch pool's own install links: 200 static `.user.js` files, so the
+// flagship one-click path works from the moment the site is built, before any
+// pool service exists to serve it dynamically.
+const { written, removed } = writeScripts(entries, scriptsDir, SITE_URL);
+
 const rejected = [...rejections.entries()].sort((a, b) => b[1] - a[1]);
 
 console.log(`wrote ${entries.length} entries to ${outPath}`);
+console.log(`wrote ${written} static scripts to ${scriptsDir}${removed > 0 ? ` (${removed} stale removed)` : ''}`);
 console.log(`  attempts        ${attempts}`);
 console.log(`  duplicates      ${duplicates}`);
 console.log(`  gate rejections ${rejected.reduce((s, [, n]) => s + n, 0)}`);

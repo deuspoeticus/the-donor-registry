@@ -58,15 +58,25 @@ Then open http://localhost:5173. The site falls back to the committed launch fil
 
 ```
 packages/core      isomorphic: attribute manifest, canonical hashing, entropy,
-                   Chow-Liu tree, forge + impossibility manifest, userscript emitter
+                   Chow-Liu tree, forge + impossibility manifest, userscript emitter,
+                   and the static-script writer that pre-generates every entry's
+                   install file at build time
 apps/site          Vite + TypeScript, no runtime dependencies — the instrument
                    src/styles/   nine files: tokens, base, cursor, chrome, board,
                                  data, controls, post, motion
                    src/fonts/    the three self-hosted faces
                    src/ui/       sector manifest, notation, chart primitives,
                                  census, consent, readouts, model, catalogue, post
-apps/api           Fastify + better-sqlite3 + Zod — the pool
-data/bootstrap.json  the seeded launch pool, generated offline, committed
+apps/worker        Hono + Cloudflare D1 — the pool, live. Writes only: donate,
+                   wear, revoke. Reading is a file (below), not a route.
+apps/api           Fastify + better-sqlite3 + Zod — the same service, superseded
+                   by apps/worker (§1 of ROADMAP.md); kept for local dev only
+data/bootstrap.json  the seeded launch pool, generated offline, committed —
+                     synthetic, no donor, nothing to revoke
+data/pool.json       the live pool's published snapshot, regenerated from D1 and
+                     deployed on every publish-pool.yml run — never committed
+                     (.gitignore), because a committed snapshot would make a
+                     withdrawn identity recoverable from git history forever
 ```
 
 `packages/core` is source-only TypeScript consumed through a Vite alias and by `tsx`. There is no build step for it, which is deliberate: the same file the browser runs is the file you read.
@@ -89,7 +99,7 @@ data/bootstrap.json  the seeded launch pool, generated offline, committed
 
 A userscript manager is genuinely required and there is no way around it. A bookmarklet fires after load, on the page you are already on; service workers, iframes and `window.open` are all confined to their own origin. The only extension-free alternative is a rewriting proxy, which was rejected because it changes what is being demonstrated — the target site would see the *server's* address and TLS handshake rather than the visitor's, and "your browser, your address, someone else's face" is the whole premise.
 
-Two things make that requirement as light as it can be. The pool serves each script from a real `.user.js` URL with `Content-Disposition: inline`, so a manager intercepts the navigation and offers to install it in one click rather than the visitor hunting for a downloaded file. And every entry can be **tried with nothing installed**: the script is run for real, at `document-start`, in a blank same-origin frame, which is then read back and discarded. That proves the mechanism works and is labelled as proving nothing about the live web, because this page can reach into a frame it created and nowhere else — the same rule that makes the userscript necessary in the first place. Under *Look only*, the comparison column is not populated at all, because reading it would measure a visitor who has just been told they would not be measured.
+Two things make that requirement as light as it can be. Every entry's script, under its default surface modes, is **pre-generated at build time** as a static `data/scripts/<id>.user.js` file — a real URL ending in `.user.js`, so a manager intercepts the navigation and offers to install it in one click, with no request to the pool service on the path between a click and a working script. Choosing a different surface mode live in the entry panel (perturb instead of converge, overrides hidden from `toString`) still asks the pool service for that one variant, served with `Content-Disposition: inline`. And every entry can be **tried with nothing installed**: the script is run for real, at `document-start`, in a blank same-origin frame, which is then read back and discarded. That proves the mechanism works and is labelled as proving nothing about the live web, because this page can reach into a frame it created and nowhere else — the same rule that makes the userscript necessary in the first place. Under *Look only*, the comparison column is not populated at all, because reading it would measure a visitor who has just been told they would not be measured.
 
 Verified against a live browser: a Windows/NVIDIA desktop wearing one pool entry presents as a Pixel 8 on Android 13 in Warsaw, with the target's renderer, extension list, core count, screen, pixel ratio, locale, time zone, offset and voice list all matching exactly. Two canvases with entirely different content produce byte-identical readback, which is what makes the pool a commons rather than a set of costumes.
 
@@ -102,6 +112,10 @@ Verified against a live browser: a Windows/NVIDIA desktop wearing one pool entry
 Stored: the attribute vector, its derived id, a created-at date bucketed to the day, the wear count, a synthetic flag, an automation likelihood, and a hash of a revocation token. The synthetic flag and automation likelihood are aggregate-only and never appear per entry.
 
 Never stored: IP address, User-Agent header, any request-level identifier, any cookie. There is no column for them, which is a stronger guarantee than a policy about them. Rate limiting hashes the caller's address under a salt that is regenerated and thrown away every ten minutes, so the buckets become unlinkable to any address — including to themselves a minute earlier.
+
+**Never committed:** `data/pool.json` and the live pool's `data/scripts/*.user.js`. Revocation deletes a row from D1 the moment a token checks out, but a row committed to a public git repository stays recoverable from that history forever — by anyone who has ever cloned or forked it — regardless of what the live site shows next. Publishing the catalogue is a deploy, not a commit (`.github/workflows/publish-pool.yml`, `apps/worker/scripts/publish-pool.ts`): the snapshot is regenerated from D1 and built into the site on every run, and the working tree that held it is thrown away with the runner. Only the offline, synthetic, donor-free `data/bootstrap.json` and its matching seed scripts are committed, because there is no one behind them to revoke.
+
+Every donation is checked against the forge's own coherence gate (`packages/core/src/constraints.ts`) before it is stored, not only when the forge samples one. An open donation route that accepted anything would let a poisoned pool wreck the Chow-Liu fit and every number derived from it; rejecting an impossible *vector* on the way in is the same argument the gate already makes about a forgery, applied to whoever submitted it. Nothing about this reads as a personhood test — a real, unusual browser passes it exactly as an internally consistent forgery does, and automation likelihood still never gates anything (§4a).
 
 The page makes no third-party requests, including for its lettering. A piece about surfaces that report on you without asking does not get to open a connection to a font CDN. The three faces — Jacquard 24 for display, Archivo for everything readable, Noto Sans Symbols 2 subsetted to a closed notation of 71 marks — are pulled once by `apps/site/scripts/fetch-fonts.mjs` and committed. The monospace is deliberately *not* carried: it resolves to whatever terminal face your machine has, which on a site about machines that give themselves away by their font metrics is the honest place to leave that decision — and because it is unknowable, every run of it sits inside a framed window rather than loose in the text.
 
@@ -117,7 +131,7 @@ A browser fingerprint is almost certainly personal data under the GDPR. The basi
 
 ## State
 
-Built: collector (14 probes), entropy with the observed/modelled gap, Chow-Liu forge with the impossibility manifest, the pool census, the dependency tree and the full mutual-information matrix beside it, all three consent tiers with the real payload preview, the userscript emitter, and the pool service with donation, wearing, revocation and the consequence log. One page, eleven fixed sector addresses, every jump a scroll.
+Built: collector (14 probes), entropy with the observed/modelled gap, Chow-Liu forge with the impossibility manifest, the pool census, the dependency tree and the full mutual-information matrix beside it, all three consent tiers with the real payload preview, the userscript emitter, all 200 launch entries' scripts pre-generated as static files at build time, and the pool service with donation, wearing, revocation and the consequence log. One page, eleven fixed sector addresses, every jump a scroll.
 
 The two acts that are not readings — a signature **given**, a face **taken** — are set apart as *rites* (SPEC §6h): boxed, sealed, with the consequence on its own line and the action alone at the foot. Ceremony by weight, never by extra steps; the consent gate stays exactly as symmetrical as §6f requires.
 

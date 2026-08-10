@@ -11,31 +11,35 @@
  * is the moment a donor asked to stop being recorded; keeping a record of it
  * indefinitely would be a poor reading of that.
  *
- * Run at the *start* of the weekly job, against the catalogue currently
- * committed and deployed — never against the one the job is about to write.
- * The file this job produces is not live until Pages finishes deploying it, and
- * an id dropped before that deploy lands would go unfiltered in the window
- * between: the old catalogue would still list an entry with nothing left to
- * filter it out. Pruning one build behind costs a week of retention on a table
- * that is usually empty, and closes that window completely.
+ * Run at the *start* of the build, against the catalogue currently deployed —
+ * never against the one the job is about to write. `data/pool.json` is no
+ * longer a file this repository commits (see `publish-pool.ts`'s file header:
+ * a committed snapshot would make a withdrawal recoverable from git history
+ * forever, which is the exact guarantee this table's own pruning exists to
+ * protect), so "currently deployed" is asked of the live site rather than
+ * read off disk. An id dropped before this build's deploy lands would
+ * otherwise go unfiltered in the window between: the old catalogue would
+ * still list an entry with nothing left to filter it out. Pruning one build
+ * behind costs one cycle of retention on a table that is usually empty, and
+ * closes that window completely.
  */
 
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-
-import { query, repoRoot, scopeFromArgv, type Scope } from './d1.js';
+import { query, scopeFromArgv, type Scope } from './d1.js';
 
 const scope: Scope = scopeFromArgv(process.argv.slice(2));
-const poolPath = resolve(repoRoot, 'data/pool.json');
+/** The catalogue as currently deployed, not the one this build is about to produce. */
+const POOL_URL = process.env.LIVE_POOL_URL ?? 'https://deuspoeticus.github.io/the-donor-registry/pool.json';
 
 let published: Set<string>;
 try {
-  const file = JSON.parse(readFileSync(poolPath, 'utf8')) as { entries: { id: string }[] };
+  const res = await fetch(POOL_URL, { cache: 'no-store' });
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  const file = (await res.json()) as { entries: { id: string }[] };
   published = new Set(file.entries.map((entry) => entry.id));
 } catch (error) {
-  // Before the first build there is no published catalogue to reason about, and
-  // no id can be shown to be safe to forget. Doing nothing is correct.
-  console.log(`no published catalogue at ${poolPath}; nothing pruned (${String(error)})`);
+  // Before the first deploy there is no published catalogue to reason about,
+  // and no id can be shown to be safe to forget. Doing nothing is correct.
+  console.log(`could not read the live catalogue at ${POOL_URL}; nothing pruned (${String(error)})`);
   process.exit(0);
 }
 

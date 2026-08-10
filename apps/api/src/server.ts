@@ -21,6 +21,7 @@ import Fastify from 'fastify';
 import type { FastifyRequest } from 'fastify';
 
 import { fingerprintId } from '@wearme/core/canonical';
+import { checkConstraints } from '@wearme/core/constraints';
 import {
   consequenceSchema,
   donateSchema,
@@ -168,6 +169,17 @@ app.post('/identity', async (req, reply) => {
   // not the id, and a client that disagrees does not get to define it.
   const id = fingerprintId(body.attrs);
   if (id !== body.id) return reply.code(400).send({ error: 'id does not match attrs' });
+
+  // The same manifest that discards 99% of the forge's own output (§5) applies
+  // here too. An open, unauthenticated donation route filled with incoherent
+  // vectors would wreck the Chow-Liu fit and every number derived from it, and
+  // rejecting an impossible *donation* is exactly the argument the gate already
+  // makes, regardless of who submitted it — not a personhood test, since a real
+  // but unusual browser passes it the same as a forgery does.
+  const gate = checkConstraints(body.attrs);
+  if (!gate.ok) {
+    return reply.code(400).send({ error: 'attribute vector is not coherent', violations: gate.violations });
+  }
 
   const existing = db.prepare('SELECT id FROM identity WHERE id = ?').get(id) as { id: string } | undefined;
   if (existing) {
