@@ -1,37 +1,27 @@
 /**
- * The measurement (sector 04) and the inference (sector 05).
+ * The analysis sector (sector 02).
  *
- * Two figures, both at full size, with the gap between them named. The
- * pool-bound caveat is set at the same weight as the headline number rather than
- * beneath it in small type, because the caveat is what makes the number true.
- *
- * The sector opens on shape and closes on detail. Before this it opened on forty
- * rows of monospace, which is the evidence and not the finding; the table is now
- * the last thing in the sector, behind a disclosure, and everything above it is a
- * reading somebody can actually take away.
+ * Combines browser measurement, automation inference, donation receipt,
+ * and the pool's dependency model.
  */
 
 import { attrDef, attrLabel, displayValue, glitchChannel } from '@wearme/core/attributes';
-import type { EntropyReport } from '@wearme/core/types';
+import type { EntropyReport, EntropyModel } from '@wearme/core/types';
+import type { AutomationEstimate } from '../classifier.js';
+import { automationStatement } from '../classifier.js';
 
-import { automationStatement, type AutomationEstimate } from '../classifier.js';
-import {
-  CHANNEL_EFFECT,
-  CHANNEL_NOTE,
-  GAP_EXPLANATION,
-  NEAR_UNIQUE_NOTE,
-  NO_GATE_NOTE,
-  POOL_BOUND_CAVEAT,
-} from '../copy.js';
+import { copy } from '../copy.js';
 import type { Board } from './board.js';
 import { barRows, figure, keyed, meter, windowed, type BarRow } from './chart.js';
 import { append, bits, h, int, pct, prob } from './dom.js';
 
+import { renderMeasuringPlaceholderContent } from './sections/s04-measurement.js';
+import { renderReceiptContent, type ReceiptHandlers } from './sections/s06-receipt.js';
+import { renderModelContent } from './model.js';
+import { decoration } from './glyphs.js';
+
 /**
- * Bits per attribute group, as the deck draws it: a full-width track, a filled
- * bar, a tick at the value, and the number right-aligned in a column of its own.
- * Groups are summed from the same per-attribute surprisals the table lists, so the
- * two cannot disagree.
+ * Bits per attribute group, as the deck draws it.
  */
 function groupChart(report: EntropyReport): HTMLElement {
   const totals = new Map<string, number>();
@@ -45,19 +35,16 @@ function groupChart(report: EntropyReport): HTMLElement {
     .sort((a, b) => b[1] - a[1])
     .map(([label, value]) => ({ label, value }));
 
-  // Exposed rather than measured: these are the bits that single this browser out,
-  // which is the one quantity on the page that is about the visitor's exposure
-  // rather than about the pool.
   return barRows(rows, { register: 'exposed' });
 }
 
-export function renderMeasurement(
+export function renderMeasurementContent(
   board: Board,
   report: EntropyReport,
   nearUniqueIds: readonly string[],
   failedProbes: readonly string[],
   probeCount: number,
-): HTMLElement {
+): HTMLElement[] {
   const dominant = report.dominantAttribute;
   const channel = glitchChannel(dominant);
 
@@ -87,8 +74,6 @@ export function renderMeasurement(
         {},
         h('td', { text: attrLabel(row.attr) }),
         h('td', { class: 'value', text: shown }),
-        // "Only you" is the identifying case, and it is the only cell in the table
-        // allowed to be red.
         h('td', {
           class: row.count === 0 ? 'num num--exposed' : 'num',
           text: row.count === 0 ? 'only you' : `${int(row.count)}×`,
@@ -128,14 +113,7 @@ export function renderMeasurement(
     ),
   );
 
-  return board.sector(
-    'measurement',
-    {
-      title: 'What this browser gave away',
-      lede: 'Read once, in front of you, from surfaces that needed no permission.',
-      meta: `1 in ${int(report.oneInN)} · ${bits(report.modelledBits)} bits`,
-    },
-
+  return [
     h(
       'div',
       { class: 'readout' },
@@ -146,16 +124,11 @@ export function renderMeasurement(
           : 'against the entries in this pool',
         'exposed',
       ),
-      h('p', { class: 'caveat', text: POOL_BOUND_CAVEAT(report.poolSize, report.ceilingBits) }),
+      h('p', { class: 'caveat', text: copy.measurement.poolBoundCaveat(report.poolSize, report.ceilingBits) }),
     ),
 
     h('hr', { class: 'rule' }),
 
-    /*
-     * The two figures and the gap between them. The naive sum is red because it is
-     * the number the industry quotes about you; the modelled figure is turquoise
-     * because the model computed it; the gap is the argument.
-     */
     h(
       'div',
       { class: 'readout' },
@@ -163,10 +136,8 @@ export function renderMeasurement(
       figure(bits(report.modelledBits), 'bits, once the dependencies are subtracted', 'inferred'),
       figure(bits(report.gapBits), 'bits of double-counting between the two'),
     ),
-    h('p', { text: GAP_EXPLANATION }),
+    h('p', { text: copy.measurement.gapExplanation }),
 
-    // How much of the naive claim survives the correction, as one position in a
-    // range rather than a third number to hold in your head.
     h('div', {}, h('span', { class: 'label', text: 'How much of the naive figure survives' }),
       meter(report.observedBits > 0 ? report.modelledBits / report.observedBits : 0, {
         register: 'inferred',
@@ -205,11 +176,11 @@ export function renderMeasurement(
             {
               key: 'channel',
               mark: 'model',
-              value: CHANNEL_EFFECT[channel] ?? CHANNEL_EFFECT.none,
+              value: copy.measurement.channelEffect[channel] ?? copy.measurement.channelEffect.none,
               register: 'inferred',
             },
           ]),
-          h('p', { class: 'gloss', text: CHANNEL_NOTE }),
+          h('p', { class: 'gloss', text: copy.measurement.channelNote }),
         )
       : null,
 
@@ -222,23 +193,16 @@ export function renderMeasurement(
           class: 'gloss',
           text: `All ${int(probeCount)} probes answered. Nothing was refused and nothing timed out.`,
         }),
-    h('p', { class: 'gloss', text: NEAR_UNIQUE_NOTE(nearUniqueIds.map(attrLabel)) }),
+    h('p', { class: 'gloss', text: copy.model.nearUniqueNote(nearUniqueIds.map(attrLabel)) }),
     details,
-  );
+  ].filter((el): el is HTMLElement => el !== null);
 }
 
-// ---------------------------------------------------------------- sector 05
-
-export function renderInference(board: Board, estimate: AutomationEstimate): HTMLElement {
+export function renderInferenceContent(estimate: AutomationEstimate): HTMLElement[] {
   const agent = estimate.likelihood;
 
-  return board.sector(
-    'inference',
-    {
-      title: 'Person or process',
-      lede: 'One more field in the vector. Nothing on this page behaves differently because of it.',
-      meta: `agent ${prob(agent)}`,
-    },
+  return [
+    h('h4', { class: 'sub', text: 'Person or process' }),
     h(
       'div',
       { class: 'readout' },
@@ -270,6 +234,67 @@ export function renderInference(board: Board, estimate: AutomationEstimate): HTM
       { key: 'consequence', mark: 'false', value: 'none. No code path reads this value.' },
     ]),
     h('p', { class: 'caveat', text: automationStatement(estimate) }),
-    h('p', { class: 'gloss', text: NO_GATE_NOTE }),
+    h('p', { class: 'gloss', text: copy.catalogue.noGateNote }),
+  ];
+}
+
+export function renderAnalysisSection(
+  board: Board,
+  state: {
+    report: EntropyReport | null;
+    automation: AutomationEstimate | null;
+    donatedId: string | null;
+    revocationToken: string | null;
+    measuring: boolean;
+    model: EntropyModel;
+    poolSize: number;
+    failedProbes: readonly string[];
+  },
+  receiptHandlers: ReceiptHandlers,
+  probeCount: number,
+): HTMLElement {
+  const children: HTMLElement[] = [];
+
+  if (state.measuring) {
+    children.push(...renderMeasuringPlaceholderContent());
+    children.push(h('hr', { class: 'rule rule--double' }));
+  } else if (state.report) {
+    children.push(...renderMeasurementContent(
+      board,
+      state.report,
+      state.model.nearUniqueIds,
+      state.failedProbes,
+      probeCount,
+    ));
+    children.push(h('hr', { class: 'rule rule--double' }));
+
+    if (state.automation) {
+      children.push(...renderInferenceContent(state.automation));
+      children.push(h('hr', { class: 'rule rule--double' }));
+    }
+
+    if (state.donatedId) {
+      children.push(...renderReceiptContent(board, { id: state.donatedId, revocationToken: state.revocationToken }, receiptHandlers));
+      children.push(h('hr', { class: 'rule rule--double' }));
+    }
+  } else {
+    children.push(h('h4', { class: 'sub', text: 'Browser Signature' }));
+    children.push(h('p', {
+      class: 'gloss',
+      text: 'No signature has been measured. Select a consent tier above to measure this browser and see its structural surprise score.',
+    }));
+    children.push(h('hr', { class: 'rule rule--double' }));
+  }
+
+  children.push(...renderModelContent(state.model, state.poolSize));
+
+  return board.sector(
+    'analysis',
+    {
+      title: 'Analysis',
+      lede: 'Your signature reading, agent likelihood, receipt, and the pool dependency structure.',
+      meta: state.report ? `1 in ${int(state.report.oneInN)}` : 'not measured',
+    },
+    ...children,
   );
 }

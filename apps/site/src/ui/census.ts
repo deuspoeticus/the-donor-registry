@@ -19,7 +19,7 @@ import { attrDef, attrLabel, groupsOf, type AttrGroup } from '@wearme/core/attri
 import type { CorruptionScale, EntropyModel } from '@wearme/core/entropy';
 import type { EntropyReport, Identity, PoolStats } from '@wearme/core/types';
 
-import { POOL_COMPOSITION, CENSUS_LEDE, CEILING_NOTE } from '../copy.js';
+import { copy } from '../copy.js';
 import type { Board } from './board.js';
 import {
   barRows,
@@ -65,7 +65,7 @@ export interface CensusInput {
   provenance: readonly [string, string][];
 }
 
-export function renderCensus(board: Board, input: CensusInput): HTMLElement {
+export function renderCensusContent(input: CensusInput): HTMLElement[] {
   const { entries, stats, model, reports, scale, self } = input;
   const n = Math.max(1, entries.length);
   const ceiling = log2(n);
@@ -111,16 +111,6 @@ export function renderCensus(board: Board, input: CensusInput): HTMLElement {
 
   // ---------------------------------------------------------------- spread
 
-  /*
-   * How separable this pool is from itself.
-   *
-   * Measured on the *unclamped* model score, because the question here is not "how
-   * identifiable is anybody" — that claim is the clamped headline in sector 04 and
-   * the pool cannot support a larger one — but "how far apart are these two hundred
-   * entries", which is a different question and is answerable. Once a pool is small
-   * enough that everybody saturates log2(N), the clamped figure is identical for
-   * everybody and this distribution would be a single column.
-   */
   const spread = reports.map((r) => r.rawModelledBits);
   const sorted = [...spread].sort((a, b) => a - b);
   const median = sorted[Math.floor(sorted.length / 2)] ?? 0;
@@ -170,12 +160,6 @@ export function renderCensus(board: Board, input: CensusInput): HTMLElement {
 
   // ---------------------------------------------------------------- by group
 
-  /*
-   * Entropy per attribute group, computed from the empirical counts rather than
-   * from the tree, so the held-out identifiers are included. They are the largest
-   * contributors in the pool and leaving them out to make the chart tidier would
-   * misstate where the information actually is.
-   */
   const groupBits = new Map<AttrGroup, number>();
   const groupCount = new Map<AttrGroup, number>();
   for (const id of model.ids) {
@@ -218,74 +202,51 @@ export function renderCensus(board: Board, input: CensusInput): HTMLElement {
   const rows = [...model.ids]
     .map((id) => {
       const counts = model.counts.get(id) ?? new Map<string, number>();
+      const distinct = counts.size;
+      const modal = modalShare(counts, n);
+      const entropy = counts ? entropyOf(counts, n) : 0;
+      const active = model.learnableIds.includes(id);
+
       return {
         id,
-        distinct: counts.size,
-        modal: modalShare(counts, n),
-        entropy: entropyOf(counts, n),
+        distinct,
+        modal,
+        entropy,
+        active,
       };
     })
     .sort((a, b) => b.entropy - a.entropy);
 
-  const maxEntropy = Math.max(...rows.map((r) => r.entropy), 0.001);
-  const tbody = h('tbody');
   for (const row of rows) {
-    const isHeld = held.has(row.id);
-    append(tbody, [
+    append(censusTable, [
       h(
         'tr',
-        {},
+        { class: row.active ? '' : 'dim' },
         h('td', { text: attrLabel(row.id) }),
-        h('td', { class: 'value', text: attrDef(row.id)?.group ?? '—' }),
-        h('td', { class: 'num', text: int(row.distinct) }),
+        h('td', { text: attrDef(row.id)?.group ?? '' }),
+        h('td', { class: 'num', text: `${int(row.distinct)}×` }),
         h('td', { class: 'num', text: pct(row.modal) }),
-        h(
-          'td',
-          { class: 'num num--inferred' },
-          bits(row.entropy),
-          h('span', {
-            class: 'bar bar--inferred',
-            style: `width:${Math.max(2, (row.entropy / maxEntropy) * 100).toFixed(1)}%`,
-          }),
-        ),
-        // The one place the table takes a side: an attribute the pool cannot model
-        // is called an identifier, in red, because that is what it is.
+        h('td', { class: 'num', text: bits(row.entropy) }),
         h('td', {
-          class: isHeld ? 'value exposed' : 'value',
-          text: isHeld ? 'held out — an identifier' : 'modelled',
+          text: row.active
+            ? 'modeled'
+            : held.has(row.id)
+              ? 'held out — near-unique'
+              : 'held out — not enough data',
         }),
       ),
     ]);
   }
-  censusTable.appendChild(tbody);
 
-  // ---------------------------------------------------------------- arrivals
+  // ---------------------------------------------------------------- history
 
   const months = new Map<string, number>();
   for (const entry of entries) {
-    const key = entry.createdAt.slice(0, 7);
-    months.set(key, (months.get(key) ?? 0) + 1);
+    const month = entry.createdAt.slice(0, 7);
+    months.set(month, (months.get(month) ?? 0) + 1);
   }
 
-  /*
-   * One bucket is not a time series.
-   *
-   * A seeded pool arrives in a single pass, so a step chart of it is a single
-   * column pretending to be a history. The sentence is the honest rendering, and
-   * the chart appears when there is something for it to show.
-   */
-  const arrivals =
-    months.size > 1
-      ? h(
-          'div',
-          {},
-          h('span', { class: 'label', text: 'Entries by month of arrival' }),
-          h('div', { class: 'scroll-x' }, stepOf(months)),
-        )
-      : h('p', {
-          class: 'gloss',
-          text: `Every entry in this pool carries the same month of arrival, ${[...months.keys()][0] ?? 'none'}: the catalogue was seeded in one pass and nothing has been donated into it since. A chart of that would be one column, so there is no chart.`,
-        });
+  const arrivals = stepOf(months);
 
   const worn =
     stats.totalWears > 0
@@ -300,15 +261,9 @@ export function renderCensus(board: Board, input: CensusInput): HTMLElement {
 
   const groupLegend = groupsOf(model.ids);
 
-  return board.sector(
-    'pool',
-    {
-      title: 'What is in the pool',
-      lede: CENSUS_LEDE,
-      meta: `${int(stats.size)} entries · ${bits(ceiling)} bit bound`,
-    },
+  return [
     figures,
-    h('p', { class: 'gloss', text: POOL_COMPOSITION(stats) }),
+    h('p', { class: 'gloss', text: copy.census.poolComposition(stats) }),
     keyed(input.provenance.map(([key, value]) => ({ key, value, mark: 'set' as const }))),
 
     h('hr', { class: 'rule rule--double' }),
@@ -320,7 +275,7 @@ export function renderCensus(board: Board, input: CensusInput): HTMLElement {
     ),
     distribution,
     spreadFacts,
-    h('p', { class: 'caveat', text: CEILING_NOTE(n, ceiling) }),
+    h('p', { class: 'caveat', text: copy.census.ceilingNote(n, ceiling) }),
 
     h('hr', { class: 'rule rule--double' }),
     h(
@@ -360,7 +315,7 @@ export function renderCensus(board: Board, input: CensusInput): HTMLElement {
       arrivals,
       h('div', {}, h('span', { class: 'label', text: 'Wear' }), worn),
     ),
-  );
+  ].filter((el): el is HTMLElement => el !== null);
 }
 
 /** Wear counts in buckets, because the tail is long and mostly empty. */

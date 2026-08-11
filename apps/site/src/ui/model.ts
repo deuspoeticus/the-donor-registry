@@ -27,7 +27,7 @@ import { attrLabel } from '@wearme/core/attributes';
 import type { ChowLiuTree } from '@wearme/core/chowliu';
 import type { EntropyModel } from '@wearme/core/entropy';
 
-import { MATRIX_NOTE, TREE_NOTE } from '../copy.js';
+import { copy } from '../copy.js';
 import type { Board } from './board.js';
 import { heatMatrix, keyed } from './chart.js';
 import { bits, h, int, svg, svgTitle } from './dom.js';
@@ -41,17 +41,12 @@ interface Placed {
   angle: number;
 }
 
-export function renderModel(board: Board, model: EntropyModel, poolSize: number): HTMLElement {
+export function renderModelContent(model: EntropyModel, poolSize: number): HTMLElement[] {
   const tree = model.tree;
 
-  return board.sector(
-    'model',
-    {
-      title: 'What the pool thinks a person is made of',
-      lede: 'One dependency per attribute, chosen from every dependency the fit measured. Both halves are below.',
-      meta: `${int(tree.nodes.length)} nodes · ${int(tree.edges.length)} edges`,
-    },
-    h('p', { text: TREE_NOTE }),
+  return [
+    h('h4', { class: 'sub', text: 'What the pool thinks a person is made of' }),
+    h('p', { text: copy.model.treeNote }),
     h('div', { class: 'scroll-x' }, radialTree(tree) as unknown as Node),
     keyed([
       { key: 'root', mark: 'model', value: attrLabel(rootOf(tree)), register: 'inferred' },
@@ -80,13 +75,13 @@ export function renderModel(board: Board, model: EntropyModel, poolSize: number)
 
     h('hr', { class: 'rule rule--double' }),
     h('h4', { class: 'sub', text: 'Everything it measured and did not keep' }),
-    h('p', { text: MATRIX_NOTE }),
+    h('p', { text: copy.model.matrixNote }),
     h('div', { class: 'scroll-x' }, miMatrix(tree) as unknown as Node),
     h('p', {
       class: 'gloss',
       text: `${int(tree.ids.length)} attributes, ${int((tree.ids.length * (tree.ids.length - 1)) / 2)} pairs measured, ${int(tree.edges.length)} kept. Cell weight is mutual information as a fraction of the strongest pair in the fit; outlined cells are the ones the tree kept.`,
     }),
-  );
+  ];
 }
 
 // ---------------------------------------------------------------- the tree

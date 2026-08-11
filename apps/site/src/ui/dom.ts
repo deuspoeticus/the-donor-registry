@@ -17,7 +17,12 @@ export function h<K extends keyof HTMLElementTagNameMap>(
     } else if (key === 'class') {
       el.className = String(value);
     } else if (key === 'text') {
-      el.textContent = String(value);
+      const textVal = String(value);
+      if (textVal.includes('**') || textVal.includes('*')) {
+        append(el, parseFormattedText(textVal));
+      } else {
+        el.textContent = textVal;
+      }
     } else if (value === true) {
       el.setAttribute(key, '');
     } else {
@@ -62,3 +67,21 @@ export const pct = (n: number): string => `${(n * 100).toFixed(n >= 0.995 || n =
 
 /** A probability, at the precision the model actually has. */
 export const prob = (n: number): string => n.toFixed(3);
+
+/** Parses inline markdown syntax (`**bold**` and `*italic*`) into DOM elements. */
+export function parseFormattedText(text: string): Child[] {
+  const parts: Child[] = [];
+  const regex = /(\*\*.*?\*\*|\*.*?\*)/g;
+  const split = text.split(regex);
+
+  for (const part of split) {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      parts.push(h('strong', {}, part.slice(2, -2)));
+    } else if (part.startsWith('*') && part.endsWith('*')) {
+      parts.push(h('em', {}, part.slice(1, -1)));
+    } else if (part) {
+      parts.push(part);
+    }
+  }
+  return parts;
+}
