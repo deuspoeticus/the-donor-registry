@@ -17,21 +17,7 @@ import { bitsDestroyedBy } from '@wearme/core/entropy';
 import { coverage, emitUserscript, NOT_COVERED, type SurfaceMode } from '@wearme/core/userscript';
 import type { Identity } from '@wearme/core/types';
 
-import {
-  INSTALL_NOTE,
-  MANAGERS,
-  MODEL_ADDRESS,
-  NOT_YET_PUBLISHED,
-  NOT_YET_PUBLISHED_NOTE,
-  RITE_TAKE,
-  TRY_ON_LIMIT,
-  TRY_ON_NOTE,
-  VERIFY_LINKS,
-  VERIFY_NOTE,
-  WEARING_LIMITS,
-  WEARING_LIMITS_HEAD,
-  WHY_AN_EXTENSION,
-} from '../copy.js';
+import { copy } from '../copy.js';
 import { scriptUrl } from '../pool.js';
 import type { Board } from './board.js';
 import { keyed, windowed, type KeyedRow } from './chart.js';
@@ -76,6 +62,7 @@ export function renderCatalogue(
   poolNote: string,
   expanded: boolean,
   onExpand: () => void,
+  entryEl?: HTMLElement | null,
 ): HTMLElement {
   /*
    * The donor's own not-yet-published entry is pinned to the front.
@@ -119,7 +106,7 @@ export function renderCatalogue(
         h('span', {
           class: pending ? 'entry__pending' : 'entry__line',
           text: pending
-            ? NOT_YET_PUBLISHED
+            ? copy.receipt.notYetPublished
             : entry.wearCount > 1
               ? `${bits(bitsDestroyedBy(entry.wearCount))} bits destroyed`
               : 'not yet shared',
@@ -166,7 +153,7 @@ export function renderCatalogue(
           text: 'Nothing has been donated yet. Measure yourself and donate, and this becomes the first entry.',
         }),
     // §7a. Plain body text at normal size, in the same voice as everything else.
-    h('p', { text: MODEL_ADDRESS }),
+    h('p', { text: copy.cover.modelAddress }),
     h('p', { class: 'gloss', text: poolNote }),
     grid,
     remaining > 0
@@ -189,10 +176,12 @@ export function renderCatalogue(
           ),
         )
       : null,
+    entryEl ? h('hr', { class: 'rule rule--double' }) : null,
+    entryEl ?? null,
   );
 }
 
-export function renderEntry(
+export function renderEntryCard(
   board: Board,
   entry: Identity,
   /** This entry is this browser's own donation and is not published yet. */
@@ -328,7 +317,7 @@ export function renderEntry(
   const managers = h('p', { class: 'gloss' });
   append(managers, [
     'A manager, if you have none: ',
-    ...MANAGERS.flatMap((m, i) => [
+    ...copy.catalogue.managers.flatMap((m, i) => [
       i > 0 ? ' · ' : '',
       h('a', { href: m.url, target: '_blank', rel: 'noopener noreferrer' }, m.name),
       h('span', { class: 'dimmer', text: ` (${m.note})` }),
@@ -409,7 +398,7 @@ export function renderEntry(
           },
           table,
         ),
-        h('p', { class: 'caveat', text: TRY_ON_LIMIT }),
+        h('p', { class: 'caveat', text: copy.catalogue.tryOnLimit }),
       ]);
       tryButton.textContent = 'Run it again';
       tryButton.disabled = false;
@@ -440,20 +429,18 @@ export function renderEntry(
   const verify = h('p', { class: 'gloss' });
   append(verify, [
     'Check it: ',
-    ...VERIFY_LINKS.flatMap((link, i) => [
+    ...copy.catalogue.verifyLinks.flatMap((link, i) => [
       i > 0 ? ' · ' : '',
       h('a', { href: link.url, target: '_blank', rel: 'noopener noreferrer' }, link.name),
     ]),
   ]);
 
-  return board.sector(
-    'entry',
-    {
-      title: entry.id.slice(0, 24),
-      lede: 'One face, in full, and the script that hands it to your browser.',
-      meta: `worn ${int(entry.wearCount)}× · ${bits(bitsDestroyedBy(entry.wearCount))} bits destroyed`,
-    },
-    isPending ? h('p', { class: 'notice', text: NOT_YET_PUBLISHED_NOTE }) : null,
+  return h(
+    'div',
+    { class: 'entry-detail-card stack', id: 'entry-detail' },
+    h('h4', { class: 'sub', text: `Face details: ${entry.id.slice(0, 24)}` }),
+    h('p', { class: 'gloss', text: `Worn ${int(entry.wearCount)}× · ${bits(bitsDestroyedBy(entry.wearCount))} bits destroyed. One face, in full, and the script that hands it to your browser.` }),
+    isPending ? h('p', { class: 'notice', text: copy.receipt.notYetPublishedNote }) : null,
     keyed([
       { key: 'entered the pool', mark: 'set', value: entry.createdAt },
       { key: 'worn', mark: 'worn', value: `${int(entry.wearCount)}×`, register: 'exposed' },
@@ -505,7 +492,7 @@ export function renderEntry(
 
     h('hr', { class: 'rule' }),
     h('h4', { class: 'sub', text: 'Trying it before installing anything' }),
-    h('p', { text: TRY_ON_NOTE }),
+    h('p', { text: copy.catalogue.tryOnNote }),
     h('div', {}, tryButton),
     tryOutput,
 
@@ -523,23 +510,23 @@ export function renderEntry(
     board.rite(
       {
         kind: 'taken',
-        kicker: RITE_TAKE.kicker,
-        title: RITE_TAKE.title,
-        seal: 'alembic',
-        consequence: RITE_TAKE.consequence,
+        kicker: copy.catalogue.riteTake.kicker,
+        title: copy.catalogue.riteTake.title,
+        seal: 'dagger',
+        consequence: copy.catalogue.riteTake.consequence,
         action: h('div', { class: 'choice-row' }, installLink, downloadButton),
       },
-      h('p', { text: WHY_AN_EXTENSION }),
-      h('p', { text: INSTALL_NOTE }),
+      h('p', { text: copy.catalogue.whyAnExtension }),
+      h('p', { text: copy.catalogue.installNote }),
       managers,
     ),
     status,
 
     h('hr', { class: 'rule' }),
-    h('h4', { class: 'sub', text: WEARING_LIMITS_HEAD }),
-    h('p', { text: WEARING_LIMITS }),
+    h('h4', { class: 'sub', text: copy.measurement.wearingLimitsHead }),
+    h('p', { text: copy.measurement.wearingLimits }),
     limits,
-    h('p', { text: VERIFY_NOTE }),
+    h('p', { text: copy.catalogue.verifyNote }),
     verify,
   );
 }

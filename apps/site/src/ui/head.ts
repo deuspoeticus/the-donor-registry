@@ -15,7 +15,7 @@
  * read the argument either.
  */
 
-import { FULL_TITLE, SLOGAN } from '../copy.js';
+import { copy } from '../copy.js';
 import { clear, h, int } from './dom.js';
 import { SECTOR_COUNT, type Sector } from './sectors.js';
 import { sigil, type SigilKey } from './sigils.js';
@@ -81,11 +81,12 @@ export function createHead(options: HeadOptions): Head {
     {
       class: 'nav__mark',
       type: 'button',
-      title: `${FULL_TITLE} — back to the top`,
+      title: `${copy.site.fullTitle} — back to the top`,
       onclick: () => options.onHome(),
     },
-    h('span', { class: 'nav__title', text: 'The Donor Registry' }),
-    h('span', { class: 'nav__slogan', text: SLOGAN }),
+    sigil('vessel', { px: 22, className: 'brand__sigil' }),
+    h('span', { class: 'nav__title', text: copy.site.registry }),
+    h('span', { class: 'nav__slogan', text: copy.site.slogan }),
   );
 
   const el = h(

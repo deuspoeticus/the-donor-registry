@@ -225,12 +225,12 @@
   --t-hero: clamp(1.9rem, 5vw, 3.5rem);
   --t-fig: clamp(2.25rem, 5.5vw, 4.5rem);
   --t-fig-sm: clamp(1.5rem, 3.2vw, 2.375rem);
-  --t-lg: clamp(1.3rem, 2.5vw, 1.8rem);
-  --t-md: 1.0625rem;
-  --t-sm: 0.9375rem;
-  --t-data: 0.8125rem;
-  --t-label: 0.6875rem;
-  --t-micro: 0.625rem;
+  --t-lg: clamp(1.4rem, 2.8vw, 2.0rem);
+  --t-md: 1.4rem;
+  --t-sm: 1.1rem;
+  --t-data: 0.95rem;
+  --t-label: 0.8rem;
+  --t-micro: 0.725rem;
 
   /* the board */
   --gutter: clamp(1rem, 3.2vw, 3rem);
