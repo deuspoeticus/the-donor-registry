@@ -6,7 +6,8 @@
  */
 
 import { attrDef, attrLabel, displayValue, glitchChannel } from '@wearme/core/attributes';
-import type { EntropyReport, EntropyModel } from '@wearme/core/types';
+import type { EntropyReport } from '@wearme/core/types';
+import type { EntropyModel } from '@wearme/core/entropy';
 import type { AutomationEstimate } from '../classifier.js';
 import { automationStatement } from '../classifier.js';
 

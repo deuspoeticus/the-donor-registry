@@ -510,10 +510,10 @@ export function renderEntryCard(
     board.rite(
       {
         kind: 'taken',
-        kicker: copy.catalogue.riteTake.kicker,
-        title: copy.catalogue.riteTake.title,
+        kicker: copy.receipt.riteTake.kicker,
+        title: copy.receipt.riteTake.title,
         seal: 'dagger',
-        consequence: copy.catalogue.riteTake.consequence,
+        consequence: copy.receipt.riteTake.consequence,
         action: h('div', { class: 'choice-row' }, installLink, downloadButton),
       },
       h('p', { text: copy.catalogue.whyAnExtension }),
